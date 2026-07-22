@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dawn-tactics"
+version = "0.1.0"
+description = "A small deterministic strategy game for learning Python OOP."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pygame-ce==2.5.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3,<10",
+]
+lesson = [
+    "ipykernel>=6.29,<8",
+]
+
+[project.scripts]
+dawn-tactics = "dawn_tactics.game:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["src"]

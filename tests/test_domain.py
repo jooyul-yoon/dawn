@@ -1,0 +1,406 @@
+import pytest
+
+from dawn_tactics import student_settings as settings
+from dawn_tactics.campaigns import CAMPAIGNS, Difficulty
+from dawn_tactics.controller import GameController
+from dawn_tactics.domain import (
+    AntiTank,
+    Battle,
+    BattleEvent,
+    BattleState,
+    EventKind,
+    Infantry,
+    Position,
+    Tank,
+    Team,
+)
+from dawn_tactics.settings_validation import (
+    StudentSettingsError,
+    validate_student_settings,
+)
+
+
+DEFAULT_BALANCE_IS_ACTIVE = (
+    settings.FIRST_DEPLOYMENT_BUDGET == 500
+    and settings.TANK_BREAKER_BUDGET == 1_000
+    and settings.COMBINED_ARMS_BUDGET == 1_200
+    and settings.TANK_COST == 400
+    and settings.TANK_MAX_HP == 10
+    and settings.TANK_DAMAGE == 3
+    and settings.TANK_RANGE == 2
+    and settings.ANTI_TANK_DAMAGE_VS_HEAVY == 5
+)
+
+
+def test_anti_tank_specializes_against_heavy_armor() -> None:
+    anti_tank = AntiTank(1, Team.BLUE, Position(1, 1))
+    tank = Tank(2, Team.RED, Position(1, 2))
+    infantry = Infantry(3, Team.RED, Position(2, 1))
+
+    assert anti_tank.damage_against(tank) == settings.ANTI_TANK_DAMAGE_VS_HEAVY
+    assert anti_tank.damage_against(infantry) == 1
+
+
+def test_target_selection_uses_distance_then_hp_then_id() -> None:
+    attacker = Infantry(10, Team.BLUE, Position(4, 4))
+    farther = Infantry(1, Team.RED, Position(0, 4))
+    closer_high_hp = Infantry(2, Team.RED, Position(4, 6))
+    closer_low_hp_high_id = Infantry(4, Team.RED, Position(6, 4))
+    closer_low_hp_low_id = Infantry(3, Team.RED, Position(4, 2))
+    closer_low_hp_high_id.hp = 2
+    closer_low_hp_low_id.hp = 2
+
+    assert attacker.choose_target([farther, closer_high_hp]) is closer_high_hp
+    assert (
+        attacker.choose_target(
+            [closer_high_hp, closer_low_hp_high_id, closer_low_hp_low_id]
+        )
+        is closer_low_hp_low_id
+    )
+
+
+def test_budget_purchase_invalid_placement_and_full_refund() -> None:
+    controller = GameController()
+    controller.load_campaign(0)
+    controller.remaining_budget = Tank.cost + Infantry.cost
+    starting_budget = controller.remaining_budget
+
+    invalid = controller.place_blue_unit("tank", Position(2, 2))
+    assert not invalid.ok
+    assert controller.remaining_budget == starting_budget
+
+    assert controller.place_blue_unit("tank", Position(7, 5)).ok
+    assert controller.remaining_budget == Infantry.cost
+    assert controller.place_blue_unit("infantry", Position(7, 4)).ok
+    assert controller.remaining_budget == 0
+
+    too_expensive = controller.place_blue_unit("infantry", Position(7, 3))
+    assert not too_expensive.ok
+    assert controller.remaining_budget == 0
+
+    refunded = controller.remove_blue_unit(Position(7, 5))
+    assert refunded.ok
+    assert controller.remaining_budget == Tank.cost
+
+
+def test_damage_is_applied_simultaneously_and_can_draw() -> None:
+    battle = Battle(width=4, height=4)
+    blue = Infantry(1, Team.BLUE, Position(2, 1))
+    red = Infantry(2, Team.RED, Position(1, 1))
+    blue.hp = 1
+    red.hp = 1
+    battle.add_unit(blue)
+    battle.add_unit(red)
+
+    assert battle.start()
+    events = battle.step()
+
+    assert battle.state is BattleState.DRAW
+    assert sum(event.kind is EventKind.ATTACK for event in events) == 2
+    assert sum(event.kind is EventKind.DESTROY for event in events) == 2
+
+
+def test_maximum_tick_limit_prevents_stalemates() -> None:
+    battle = Battle(width=8, height=8, max_ticks=1)
+    battle.add_unit(Infantry(1, Team.BLUE, Position(7, 0)))
+    battle.add_unit(Infantry(2, Team.RED, Position(0, 7)))
+    assert battle.start()
+
+    battle.step()
+
+    assert battle.tick == 1
+    assert battle.state is BattleState.DRAW
+
+
+def _run_repeatable_battle() -> tuple[BattleState, tuple[tuple[object, ...], ...]]:
+    battle = Battle(width=8, height=6)
+    battle.add_unit(Tank(1, Team.BLUE, Position(5, 2)))
+    battle.add_unit(Infantry(2, Team.BLUE, Position(5, 3)))
+    battle.add_unit(AntiTank(3, Team.RED, Position(0, 2)))
+    battle.add_unit(Infantry(4, Team.RED, Position(0, 3)))
+    assert battle.start()
+    while battle.state is BattleState.RUNNING:
+        battle.step()
+    log = tuple(
+        (
+            event.kind,
+            event.unit_id,
+            event.target_id,
+            event.from_position,
+            event.to_position,
+            event.amount,
+            event.result,
+        )
+        for event in battle.history
+    )
+    return battle.state, log
+
+
+def test_identical_battles_have_identical_results_and_event_logs() -> None:
+    assert _run_repeatable_battle() == _run_repeatable_battle()
+
+
+def _run_campaign_layout(
+    campaign_index: int,
+    difficulty: Difficulty,
+    layout: tuple[tuple[str, Position], ...],
+) -> tuple[BattleState, int, tuple[BattleEvent, ...]]:
+    controller = GameController(difficulty)
+    controller.load_campaign(campaign_index)
+    for kind, position in layout:
+        assert controller.place_blue_unit(kind, position).ok
+    assert controller.start_battle().ok
+    while controller.battle.state is BattleState.RUNNING:
+        controller.step()
+    return (
+        controller.battle.state,
+        controller.battle.tick,
+        tuple(controller.battle.history),
+    )
+
+
+@pytest.mark.skipif(
+    not DEFAULT_BALANCE_IS_ACTIVE,
+    reason="Restore Lesson 01 defaults to verify the original campaign balance.",
+)
+def test_deployment_click_order_does_not_change_the_battle() -> None:
+    layout = (
+        ("anti_tank", Position(7, 4)),
+        ("infantry", Position(6, 1)),
+        ("anti_tank", Position(5, 5)),
+        ("infantry", Position(6, 9)),
+        ("infantry", Position(6, 3)),
+        ("infantry", Position(6, 7)),
+        ("infantry", Position(5, 3)),
+    )
+
+    forward = _run_campaign_layout(2, Difficulty.HARD, layout)
+    backward = _run_campaign_layout(2, Difficulty.HARD, tuple(reversed(layout)))
+
+    assert forward == backward
+    assert forward[:2] == (BattleState.BLUE_WIN, 19)
+
+
+def test_restart_restores_campaign_budget_enemies_and_unit_ids() -> None:
+    controller = GameController()
+    controller.load_campaign(1)
+    initial_enemy_signature = [
+        (unit.unit_id, unit.kind, unit.position)
+        for unit in controller.battle.units
+    ]
+    controller.place_blue_unit("anti_tank", Position(7, 4))
+
+    controller.restart()
+
+    assert controller.remaining_budget == settings.TANK_BREAKER_BUDGET
+    assert [
+        (unit.unit_id, unit.kind, unit.position)
+        for unit in controller.battle.units
+    ] == initial_enemy_signature
+    assert all(unit.team is Team.RED for unit in controller.battle.units)
+
+
+def test_student_settings_are_safe() -> None:
+    validate_student_settings()
+
+
+def test_zero_battle_speed_has_a_helpful_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "BATTLE_STEP_SECONDS", 0)
+
+    with pytest.raises(StudentSettingsError, match="BATTLE_STEP_SECONDS"):
+        validate_student_settings()
+
+
+def test_text_used_for_tank_cost_has_a_helpful_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "TANK_COST", "200")
+
+    with pytest.raises(StudentSettingsError, match="TANK_COST"):
+        validate_student_settings()
+
+
+def test_tank_class_uses_student_settings() -> None:
+    tank = Tank(1, Team.BLUE, Position(1, 1))
+
+    assert Tank.display_name == settings.TANK_NAME
+    assert Tank.cost == settings.TANK_COST
+    assert Tank.max_hp == settings.TANK_MAX_HP
+    assert tank.hp == settings.TANK_MAX_HP
+    assert Tank.base_damage == settings.TANK_DAMAGE
+    assert Tank.attack_range == settings.TANK_RANGE
+
+
+def test_campaigns_use_student_budget_settings() -> None:
+    expected = (
+        settings.FIRST_DEPLOYMENT_BUDGET,
+        settings.TANK_BREAKER_BUDGET,
+        settings.COMBINED_ARMS_BUDGET,
+    )
+
+    assert tuple(campaign.starting_budget for campaign in CAMPAIGNS) == expected
+    for campaign, budget in zip(CAMPAIGNS, expected, strict=True):
+        assert f"${budget:,}" in campaign.objective_for(Difficulty.NORMAL)
+
+
+def test_hard_mode_has_less_budget_and_visible_reinforcements() -> None:
+    for campaign in CAMPAIGNS:
+        assert campaign.budget_for(Difficulty.HARD) < campaign.budget_for(
+            Difficulty.NORMAL
+        )
+        assert len(campaign.enemies_for(Difficulty.HARD)) > len(
+            campaign.enemies_for(Difficulty.NORMAL)
+        )
+
+
+def test_restart_preserves_hard_mode() -> None:
+    controller = GameController(Difficulty.HARD)
+    controller.load_campaign(1)
+    hard_budget = CAMPAIGNS[1].budget_for(Difficulty.HARD)
+    hard_enemy_count = len(CAMPAIGNS[1].enemies_for(Difficulty.HARD))
+
+    controller.restart()
+
+    assert controller.difficulty is Difficulty.HARD
+    assert controller.remaining_budget == hard_budget
+    assert len(controller.battle.units) == hard_enemy_count
+
+
+@pytest.mark.parametrize(
+    ("tank_damage", "expected_state", "expected_ticks"),
+    (
+        (3, BattleState.BLUE_WIN, 9),
+        (1, BattleState.RED_WIN, 10),
+        (6, BattleState.BLUE_WIN, 7),
+    ),
+)
+@pytest.mark.skipif(
+    not DEFAULT_BALANCE_IS_ACTIVE,
+    reason="Restore Lesson 01 defaults to verify its baseline experiment.",
+)
+def test_lesson_one_normal_mode_damage_experiment_stays_reproducible(
+    monkeypatch: pytest.MonkeyPatch,
+    tank_damage: int,
+    expected_state: BattleState,
+    expected_ticks: int,
+) -> None:
+    monkeypatch.setattr(Tank, "base_damage", tank_damage)
+    controller = GameController(Difficulty.NORMAL)
+    controller.load_campaign(0)
+    assert controller.place_blue_unit("infantry", Position(7, 4)).ok
+    assert controller.place_blue_unit("tank", Position(7, 6)).ok
+    assert controller.start_battle().ok
+
+    while controller.battle.state is BattleState.RUNNING:
+        controller.step()
+
+    assert controller.battle.state is expected_state
+    assert controller.battle.tick == expected_ticks
+
+
+@pytest.mark.parametrize(
+    ("campaign_index", "layout"),
+    (
+        (
+            0,
+            (
+                ("infantry", Position(7, 4)),
+                ("tank", Position(7, 6)),
+            ),
+        ),
+        (
+            1,
+            (
+                ("anti_tank", Position(7, 3)),
+                ("anti_tank", Position(7, 5)),
+                ("anti_tank", Position(7, 7)),
+                ("infantry", Position(6, 4)),
+                ("infantry", Position(6, 6)),
+            ),
+        ),
+        (
+            2,
+            (
+                ("tank", Position(7, 5)),
+                ("anti_tank", Position(7, 3)),
+                ("artillery", Position(7, 8)),
+                ("infantry", Position(6, 4)),
+                ("infantry", Position(6, 7)),
+            ),
+        ),
+    ),
+)
+@pytest.mark.skipif(
+    not DEFAULT_BALANCE_IS_ACTIVE,
+    reason="Restore Lesson 01 defaults to verify the original campaign balance.",
+)
+def test_each_campaign_has_a_verified_winning_loadout(
+    campaign_index: int,
+    layout: tuple[tuple[str, Position], ...],
+) -> None:
+    controller = GameController()
+    controller.load_campaign(campaign_index)
+    for kind, position in layout:
+        assert controller.place_blue_unit(kind, position).ok
+    assert controller.start_battle().ok
+
+    while controller.battle.state is BattleState.RUNNING:
+        controller.step()
+
+    assert controller.battle.state is BattleState.BLUE_WIN
+    assert controller.battle.tick < controller.battle.max_ticks
+
+
+@pytest.mark.parametrize(
+    ("campaign_index", "layout"),
+    (
+        (
+            0,
+            (
+                ("infantry", Position(5, 11)),
+                ("artillery", Position(7, 0)),
+            ),
+        ),
+        (
+            1,
+            (
+                ("infantry", Position(7, 8)),
+                ("infantry", Position(5, 3)),
+                ("artillery", Position(7, 11)),
+                ("anti_tank", Position(6, 4)),
+                ("infantry", Position(6, 10)),
+            ),
+        ),
+        (
+            2,
+            (
+                ("anti_tank", Position(7, 4)),
+                ("infantry", Position(6, 1)),
+                ("anti_tank", Position(5, 5)),
+                ("infantry", Position(6, 9)),
+                ("infantry", Position(6, 3)),
+                ("infantry", Position(6, 7)),
+                ("infantry", Position(5, 3)),
+            ),
+        ),
+    ),
+)
+@pytest.mark.skipif(
+    not DEFAULT_BALANCE_IS_ACTIVE,
+    reason="Restore Lesson 01 defaults to verify the original campaign balance.",
+)
+def test_each_hard_campaign_has_a_verified_winning_loadout(
+    campaign_index: int,
+    layout: tuple[tuple[str, Position], ...],
+) -> None:
+    controller = GameController(Difficulty.HARD)
+    controller.load_campaign(campaign_index)
+    for kind, position in layout:
+        assert controller.place_blue_unit(kind, position).ok
+    assert controller.start_battle().ok
+
+    while controller.battle.state is BattleState.RUNNING:
+        controller.step()
+
+    assert controller.battle.state is BattleState.BLUE_WIN
+    assert controller.battle.tick < controller.battle.max_ticks
