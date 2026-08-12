@@ -19,6 +19,7 @@ from .domain import (
     Unit,
 )
 from .settings_validation import validate_student_settings
+from .student_rules_validation import validate_student_rules
 
 
 WINDOW_SIZE = (1280, 760)
@@ -42,6 +43,29 @@ BLUE = (74, 151, 255)
 RED = (237, 91, 105)
 GREEN = (83, 204, 142)
 
+UNIT_KINDS = (
+    "infantry",
+    "anti_tank",
+    "tank",
+    "artillery",
+    "machine_gun",
+    "cavalry",
+)
+
+
+def unit_rule_text(kind: str) -> str:
+    unit_class = UNIT_REGISTRY[kind]
+    if kind == "anti_tank":
+        return (
+            f"DMG {unit_class.base_damage} / "
+            f"{settings.ANTI_TANK_DAMAGE_VS_HEAVY} vs TANK"
+        )
+    if kind == "machine_gun":
+        return f"DMG BY ARMOR  RNG {unit_class.attack_range}"
+    if kind == "cavalry":
+        return f"DMG BY TYPE  RNG {unit_class.attack_range}"
+    return f"DMG {unit_class.base_damage}  RNG {unit_class.attack_range}"
+
 
 class GameApp:
     def __init__(
@@ -49,6 +73,7 @@ class GameApp:
         default_difficulty: Difficulty = Difficulty.HARD,
     ) -> None:
         validate_student_settings()
+        validate_student_rules()
         pygame.init()
         pygame.display.set_caption(settings.GAME_TITLE.title())
         self.screen = pygame.display.set_mode(WINDOW_SIZE)
@@ -99,6 +124,8 @@ class GameApp:
             pygame.K_2: "anti_tank",
             pygame.K_3: "tank",
             pygame.K_4: "artillery",
+            pygame.K_5: "machine_gun",
+            pygame.K_6: "cavalry",
         }
         if key in number_keys:
             self.selected_kind = number_keys[key]
@@ -401,11 +428,38 @@ class GameApp:
             pygame.draw.rect(self.screen, outline, body, width=2, border_radius=7)
             pygame.draw.circle(self.screen, outline, center, 8, width=2)
             pygame.draw.line(self.screen, outline, (x + 5, y - 5), (x + 27, y - 21), width=4)
-        else:
+        elif unit.kind == "machine_gun":
+            base = pygame.Rect(x - 22, y - 13, 38, 26)
+            pygame.draw.rect(self.screen, color, base, border_radius=8)
+            pygame.draw.rect(self.screen, outline, base, width=2, border_radius=8)
+            pygame.draw.line(
+                self.screen, outline, (x + 5, y - 3), (x + 28, y - 16), width=4
+            )
+            pygame.draw.line(
+                self.screen, outline, (x - 8, y + 10), (x - 17, y + 23), width=3
+            )
+            pygame.draw.line(
+                self.screen, outline, (x + 4, y + 10), (x + 13, y + 23), width=3
+            )
+        elif unit.kind == "cavalry":
+            points = [
+                (x - 22, y - 14),
+                (x + 4, y - 21),
+                (x + 23, y),
+                (x + 4, y + 21),
+                (x - 22, y + 14),
+                (x - 8, y),
+            ]
+            pygame.draw.polygon(self.screen, color, points)
+            pygame.draw.polygon(self.screen, outline, points, width=2)
+        elif unit.kind == "artillery":
             points = [(x, y - 24), (x + 24, y + 20), (x - 24, y + 20)]
             pygame.draw.polygon(self.screen, color, points)
             pygame.draw.polygon(self.screen, outline, points, width=2)
             pygame.draw.line(self.screen, outline, (x, y - 5), (x, y - 29), width=4)
+        else:
+            pygame.draw.circle(self.screen, color, center, 20)
+            pygame.draw.circle(self.screen, outline, center, 20, width=2)
 
         self._draw_text(
             unit.short_name,
@@ -464,7 +518,7 @@ class GameApp:
         if state is BattleState.RUNNING:
             instruction = "Units act automatically • R restarts this mission"
         elif state is BattleState.SETUP:
-            instruction = "1–4 select • Left-click place • Right-click refund"
+            instruction = "1–6 select • Left-click place • Right-click refund"
         else:
             instruction = "Battle complete • Review the result or try again"
         self._draw_text(
@@ -492,25 +546,20 @@ class GameApp:
                 unit_class.display_name,
                 self.fonts["body"],
                 name_color,
-                (rect.x + 12, rect.y + 10),
+                (rect.x + 12, rect.y + 7),
             )
             self._draw_text(
                 f"${unit_class.cost}  HP {unit_class.max_hp}",
                 self.fonts["small"],
                 GREEN if affordable else (99, 106, 119),
-                (rect.x + 12, rect.y + 39),
+                (rect.x + 12, rect.y + 30),
             )
-            rule_text = (
-                f"DMG {unit_class.base_damage} / "
-                f"{settings.ANTI_TANK_DAMAGE_VS_HEAVY} vs TANK"
-                if kind == "anti_tank"
-                else f"DMG {unit_class.base_damage}  RNG {unit_class.attack_range}"
-            )
+            rule_text = unit_rule_text(kind)
             self._draw_text(
                 rule_text,
                 self.fonts["tiny"],
                 MUTED,
-                (rect.x + 12, rect.y + 65),
+                (rect.x + 12, rect.y + 53),
             )
 
         start_rect = self._start_rect()
@@ -534,7 +583,7 @@ class GameApp:
         self._draw_button(self._restart_rect(), "RESTART", (73, 92, 124))
         self._draw_button(self._menu_rect(), "CAMPAIGNS", (73, 92, 124))
 
-        status_rect = pygame.Rect(PANEL_LEFT + 24, 552, PANEL_WIDTH - 48, 54)
+        status_rect = self._status_rect()
         pygame.draw.rect(self.screen, (19, 25, 39), status_rect, border_radius=8)
         self._draw_wrapped(
             self.status,
@@ -546,19 +595,19 @@ class GameApp:
             f"Battle tick: {self.controller.battle.tick} / {self.controller.battle.max_ticks}",
             self.fonts["tiny"],
             MUTED,
-            (PANEL_LEFT + 24, 618),
+            (PANEL_LEFT + 24, 574),
         )
         self._draw_text(
             "LEARN BY EDITING",
             self.fonts["small"],
             ACCENT,
-            (PANEL_LEFT + 24, 658),
+            (PANEL_LEFT + 24, 610),
         )
         self._draw_text(
-            "Unit subclasses live in domain.py",
+            "Day 2 rules live in student_rules.py",
             self.fonts["tiny"],
             MUTED,
-            (PANEL_LEFT + 24, 685),
+            (PANEL_LEFT + 24, 637),
         )
 
     def _draw_result_overlay(self) -> None:
@@ -594,27 +643,29 @@ class GameApp:
         }
 
     def _unit_card_rects(self) -> dict[str, pygame.Rect]:
-        kinds = ("infantry", "anti_tank", "tank", "artillery")
         result: dict[str, pygame.Rect] = {}
-        for index, kind in enumerate(kinds):
+        for index, kind in enumerate(UNIT_KINDS):
             column = index % 2
             row = index // 2
             result[kind] = pygame.Rect(
                 PANEL_LEFT + 22 + column * 185,
-                150 + row * 105,
+                142 + row * 84,
                 174,
-                92,
+                76,
             )
         return result
 
     def _start_rect(self) -> pygame.Rect:
-        return pygame.Rect(PANEL_LEFT + 24, 378, PANEL_WIDTH - 48, 54)
+        return pygame.Rect(PANEL_LEFT + 24, 400, PANEL_WIDTH - 48, 48)
 
     def _restart_rect(self) -> pygame.Rect:
-        return pygame.Rect(PANEL_LEFT + 24, 445, 168, 44)
+        return pygame.Rect(PANEL_LEFT + 24, 456, 168, 40)
 
     def _menu_rect(self) -> pygame.Rect:
-        return pygame.Rect(PANEL_LEFT + 208, 445, 168, 44)
+        return pygame.Rect(PANEL_LEFT + 208, 456, 168, 40)
+
+    def _status_rect(self) -> pygame.Rect:
+        return pygame.Rect(PANEL_LEFT + 24, 508, PANEL_WIDTH - 48, 52)
 
     def _result_button_rects(
         self,
