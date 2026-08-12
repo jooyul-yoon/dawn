@@ -6,6 +6,7 @@ from enum import Enum
 from typing import ClassVar, Iterable
 
 from . import student_settings as settings
+from .student_rules_validation import cavalry_damage_for, machine_gun_damage_for
 
 
 class Team(str, Enum):
@@ -209,11 +210,45 @@ class Artillery(Unit):
     armor = "LIGHT"
 
 
+class MachineGun(Unit):
+    kind = "machine_gun"
+    display_name = "Machine Gun"
+    short_name = "MG"
+    cost = 300
+    max_hp = 5
+    base_damage = 1
+    attack_range = 3
+    attack_every = 2
+    move_every = 1
+    armor = "LIGHT"
+
+    def damage_against(self, target: Unit) -> int:
+        return machine_gun_damage_for(target.armor)
+
+
+class Cavalry(Unit):
+    kind = "cavalry"
+    display_name = "Cavalry"
+    short_name = "C"
+    cost = 200
+    max_hp = 6
+    base_damage = 1
+    attack_range = 1
+    attack_every = 1
+    move_every = 1
+    armor = "LIGHT"
+
+    def damage_against(self, target: Unit) -> int:
+        return cavalry_damage_for(target.kind)
+
+
 UNIT_REGISTRY: dict[str, type[Unit]] = {
     Infantry.kind: Infantry,
     AntiTank.kind: AntiTank,
     Tank.kind: Tank,
     Artillery.kind: Artillery,
+    MachineGun.kind: MachineGun,
+    Cavalry.kind: Cavalry,
 }
 
 

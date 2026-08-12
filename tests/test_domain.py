@@ -1,18 +1,23 @@
 import pytest
 
+from dawn_tactics import student_rules as rules
 from dawn_tactics import student_settings as settings
 from dawn_tactics.campaigns import CAMPAIGNS, Difficulty
 from dawn_tactics.controller import GameController
 from dawn_tactics.domain import (
     AntiTank,
+    Artillery,
     Battle,
     BattleEvent,
     BattleState,
+    Cavalry,
     EventKind,
     Infantry,
+    MachineGun,
     Position,
     Tank,
     Team,
+    UNIT_REGISTRY,
 )
 from dawn_tactics.settings_validation import (
     StudentSettingsError,
@@ -30,6 +35,48 @@ DEFAULT_BALANCE_IS_ACTIVE = (
     and settings.TANK_RANGE == 2
     and settings.ANTI_TANK_DAMAGE_VS_HEAVY == 5
 )
+
+
+def test_machine_gun_and_cavalry_stats_and_registry() -> None:
+    assert UNIT_REGISTRY["machine_gun"] is MachineGun
+    assert (
+        MachineGun.display_name,
+        MachineGun.short_name,
+        MachineGun.cost,
+        MachineGun.max_hp,
+        MachineGun.base_damage,
+        MachineGun.attack_range,
+        MachineGun.attack_every,
+        MachineGun.move_every,
+        MachineGun.armor,
+    ) == ("Machine Gun", "MG", 300, 5, 1, 3, 2, 1, "LIGHT")
+
+    assert UNIT_REGISTRY["cavalry"] is Cavalry
+    assert (
+        Cavalry.display_name,
+        Cavalry.short_name,
+        Cavalry.cost,
+        Cavalry.max_hp,
+        Cavalry.base_damage,
+        Cavalry.attack_range,
+        Cavalry.attack_every,
+        Cavalry.move_every,
+        Cavalry.armor,
+    ) == ("Cavalry", "C", 200, 6, 1, 1, 1, 1, "LIGHT")
+
+
+def test_new_units_delegate_damage_to_student_rules(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    machine_gun = MachineGun(1, Team.BLUE, Position(2, 2))
+    cavalry = Cavalry(2, Team.BLUE, Position(2, 3))
+    tank = Tank(3, Team.RED, Position(1, 2))
+    artillery = Artillery(4, Team.RED, Position(1, 3))
+    monkeypatch.setattr(rules, "machine_gun_damage", lambda armor: 7)
+    monkeypatch.setattr(rules, "cavalry_damage", lambda kind: 8)
+
+    assert machine_gun.damage_against(tank) == 7
+    assert cavalry.damage_against(artillery) == 8
 
 
 def test_anti_tank_specializes_against_heavy_armor() -> None:
@@ -404,3 +451,26 @@ def test_each_hard_campaign_has_a_verified_winning_loadout(
 
     assert controller.battle.state is BattleState.BLUE_WIN
     assert controller.battle.tick < controller.battle.max_ticks
+
+
+def test_all_campaigns_allow_six_player_unit_types() -> None:
+    expected = (
+        "infantry",
+        "anti_tank",
+        "tank",
+        "artillery",
+        "machine_gun",
+        "cavalry",
+    )
+    assert all(campaign.allowed_units == expected for campaign in CAMPAIGNS)
+
+
+def test_campaign_one_can_buy_and_refund_both_day_two_units() -> None:
+    controller = GameController(Difficulty.NORMAL)
+    controller.load_campaign(0)
+    assert controller.place_blue_unit("machine_gun", Position(7, 4)).ok
+    assert controller.remaining_budget == 200
+    assert controller.place_blue_unit("cavalry", Position(7, 6)).ok
+    assert controller.remaining_budget == 0
+    assert controller.remove_blue_unit(Position(7, 4)).ok
+    assert controller.remaining_budget == 300

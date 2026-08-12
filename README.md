@@ -8,7 +8,8 @@ The demo contains:
 
 - three budget-puzzle campaigns;
 - selectable **Normal** and **Hard** modes;
-- four Python subclasses: `Infantry`, `AntiTank`, `Tank`, and `Artillery`;
+- six Python subclasses: `Infantry`, `AntiTank`, `Tank`, `Artillery`,
+  `MachineGun`, and `Cavalry`;
 - purchase, deployment, full setup refund, restart, and next-mission flow;
 - deterministic grid movement and simultaneous combat damage;
 - abstract, non-graphic presentation with illustrated unit miniatures and pygame effects.
@@ -69,7 +70,7 @@ python -m dawn_tactics --difficulty hard
 
 ## Controls
 
-- `1`–`4`: select a unit
+- `1`–`6`: select a unit
 - Left click: place the selected unit in the blue deployment zone
 - Right click: remove a blue unit and receive a full refund during setup
 - `Space`: start battle
@@ -102,13 +103,27 @@ Lesson 01 uses **Normal** mode, changes settings one at a time, restarts the
 game, and compares a prediction with the visible result. Restore the defaults
 printed at the end of the notebook after class.
 
+## Lesson 02: Conditionals
+
+Lesson 02 adds Machine Gun and Cavalry. Their damage decisions live in a small
+student file so `if`, `elif`, and `else` visibly change real battles.
+
+- [Korean/bilingual student notebook](lessons/lesson_02_conditionals.ipynb)
+- [English student notebook](lessons/lesson_02_conditionals_en.ipynb)
+- [Korean teacher guide](lessons/lesson_02_curriculum_ko.md)
+- [Safe conditional rules](src/dawn_tactics/student_rules.py)
+
+Use Normal Campaign 1 for the core experiment. Machine Gun costs $300 and
+Cavalry costs $200, so both fit the original $500 budget. Restore the default
+rules printed at the end of the notebook after class.
+
 ## Teaching boundary
 
-In Lesson 01 students edit `src/dawn_tactics/student_settings.py`. In later OOP
-lessons they move into `src/dawn_tactics/domain.py`, where the `Unit` base class
-and four subclasses expose state, methods, inheritance, and an overridden
-anti-tank damage rule. Rendering and input live separately in `game.py`, so a
-rule change can be tested without knowing pygame first.
+In Lesson 01 students edit `student_settings.py`; in Lesson 02 they edit
+`student_rules.py`. Both files keep early lessons away from pygame and class
+internals. Later OOP lessons move into `domain.py`, where the `Unit` base class
+and six subclasses expose state, methods, inheritance, and overridden damage
+rules.
 
 ## Unit image assets
 
