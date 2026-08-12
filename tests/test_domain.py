@@ -138,13 +138,13 @@ def test_expanded_battle_rejects_positions_beyond_new_border(
         Battle().add_unit(Infantry(1, Team.BLUE, position))
 
 
-def test_blue_deployment_zone_is_bottom_three_rows_after_expansion() -> None:
+def test_blue_deployment_zone_is_bottom_four_rows_after_expansion() -> None:
     controller = GameController()
     controller.load_campaign(0)
     controller.remaining_budget = Infantry.cost * 4
 
-    assert not controller.place_blue_unit("infantry", Position(6, 1)).ok
-    for column, row in enumerate((7, 8, 9), start=1):
+    assert not controller.place_blue_unit("infantry", Position(5, 1)).ok
+    for column, row in enumerate((6, 7, 8, 9), start=1):
         assert controller.place_blue_unit("infantry", Position(row, column)).ok
 
 
@@ -193,16 +193,16 @@ def test_budget_purchase_invalid_placement_and_full_refund() -> None:
     assert not invalid.ok
     assert controller.remaining_budget == starting_budget
 
-    assert controller.place_blue_unit("tank", Position(7, 5)).ok
+    assert controller.place_blue_unit("tank", Position(8, 6)).ok
     assert controller.remaining_budget == Infantry.cost
-    assert controller.place_blue_unit("infantry", Position(7, 4)).ok
+    assert controller.place_blue_unit("infantry", Position(8, 5)).ok
     assert controller.remaining_budget == 0
 
-    too_expensive = controller.place_blue_unit("infantry", Position(7, 3))
+    too_expensive = controller.place_blue_unit("infantry", Position(8, 4))
     assert not too_expensive.ok
     assert controller.remaining_budget == 0
 
-    refunded = controller.remove_blue_unit(Position(7, 5))
+    refunded = controller.remove_blue_unit(Position(8, 6))
     assert refunded.ok
     assert controller.remaining_budget == Tank.cost
 
@@ -289,13 +289,13 @@ def _run_campaign_layout(
 )
 def test_deployment_click_order_does_not_change_the_battle() -> None:
     layout = (
-        ("anti_tank", Position(7, 4)),
-        ("infantry", Position(6, 1)),
-        ("anti_tank", Position(5, 5)),
-        ("infantry", Position(6, 9)),
-        ("infantry", Position(6, 3)),
-        ("infantry", Position(6, 7)),
-        ("infantry", Position(5, 3)),
+        ("anti_tank", Position(8, 5)),
+        ("infantry", Position(7, 2)),
+        ("anti_tank", Position(6, 6)),
+        ("infantry", Position(7, 10)),
+        ("infantry", Position(7, 4)),
+        ("infantry", Position(7, 8)),
+        ("infantry", Position(6, 4)),
     )
 
     forward = _run_campaign_layout(2, Difficulty.HARD, layout)
@@ -312,7 +312,7 @@ def test_restart_restores_campaign_budget_enemies_and_unit_ids() -> None:
         (unit.unit_id, unit.kind, unit.position)
         for unit in controller.battle.units
     ]
-    controller.place_blue_unit("anti_tank", Position(7, 4))
+    controller.place_blue_unit("anti_tank", Position(8, 5))
 
     controller.restart()
 
@@ -411,8 +411,8 @@ def test_lesson_one_normal_mode_damage_experiment_stays_reproducible(
     monkeypatch.setattr(Tank, "base_damage", tank_damage)
     controller = GameController(Difficulty.NORMAL)
     controller.load_campaign(0)
-    assert controller.place_blue_unit("infantry", Position(7, 4)).ok
-    assert controller.place_blue_unit("tank", Position(7, 6)).ok
+    assert controller.place_blue_unit("infantry", Position(8, 5)).ok
+    assert controller.place_blue_unit("tank", Position(8, 7)).ok
     assert controller.start_battle().ok
 
     while controller.battle.state is BattleState.RUNNING:
@@ -428,28 +428,28 @@ def test_lesson_one_normal_mode_damage_experiment_stays_reproducible(
         (
             0,
             (
-                ("infantry", Position(7, 4)),
-                ("tank", Position(7, 6)),
+                ("infantry", Position(8, 5)),
+                ("tank", Position(8, 7)),
             ),
         ),
         (
             1,
             (
-                ("anti_tank", Position(7, 3)),
-                ("anti_tank", Position(7, 5)),
-                ("anti_tank", Position(7, 7)),
-                ("infantry", Position(6, 4)),
-                ("infantry", Position(6, 6)),
+                ("anti_tank", Position(8, 4)),
+                ("anti_tank", Position(8, 6)),
+                ("anti_tank", Position(8, 8)),
+                ("infantry", Position(7, 5)),
+                ("infantry", Position(7, 7)),
             ),
         ),
         (
             2,
             (
-                ("tank", Position(7, 5)),
-                ("anti_tank", Position(7, 3)),
-                ("artillery", Position(7, 8)),
-                ("infantry", Position(6, 4)),
-                ("infantry", Position(6, 7)),
+                ("tank", Position(8, 6)),
+                ("anti_tank", Position(8, 4)),
+                ("artillery", Position(8, 9)),
+                ("infantry", Position(7, 5)),
+                ("infantry", Position(7, 8)),
             ),
         ),
     ),
@@ -481,30 +481,30 @@ def test_each_campaign_has_a_verified_winning_loadout(
         (
             0,
             (
-                ("infantry", Position(5, 11)),
-                ("artillery", Position(7, 0)),
+                ("infantry", Position(6, 12)),
+                ("artillery", Position(8, 1)),
             ),
         ),
         (
             1,
             (
-                ("infantry", Position(7, 8)),
-                ("infantry", Position(5, 3)),
-                ("artillery", Position(7, 11)),
-                ("anti_tank", Position(6, 4)),
-                ("infantry", Position(6, 10)),
+                ("infantry", Position(8, 9)),
+                ("infantry", Position(6, 4)),
+                ("artillery", Position(8, 12)),
+                ("anti_tank", Position(7, 5)),
+                ("infantry", Position(7, 11)),
             ),
         ),
         (
             2,
             (
-                ("anti_tank", Position(7, 4)),
-                ("infantry", Position(6, 1)),
-                ("anti_tank", Position(5, 5)),
-                ("infantry", Position(6, 9)),
-                ("infantry", Position(6, 3)),
-                ("infantry", Position(6, 7)),
-                ("infantry", Position(5, 3)),
+                ("anti_tank", Position(8, 5)),
+                ("infantry", Position(7, 2)),
+                ("anti_tank", Position(6, 6)),
+                ("infantry", Position(7, 10)),
+                ("infantry", Position(7, 4)),
+                ("infantry", Position(7, 8)),
+                ("infantry", Position(6, 4)),
             ),
         ),
     ),
@@ -545,9 +545,9 @@ def test_all_campaigns_allow_six_player_unit_types() -> None:
 def test_campaign_one_can_buy_and_refund_both_day_two_units() -> None:
     controller = GameController(Difficulty.NORMAL)
     controller.load_campaign(0)
-    assert controller.place_blue_unit("machine_gun", Position(7, 4)).ok
+    assert controller.place_blue_unit("machine_gun", Position(8, 5)).ok
     assert controller.remaining_budget == 200
-    assert controller.place_blue_unit("cavalry", Position(7, 6)).ok
+    assert controller.place_blue_unit("cavalry", Position(8, 7)).ok
     assert controller.remaining_budget == 0
-    assert controller.remove_blue_unit(Position(7, 4)).ok
+    assert controller.remove_blue_unit(Position(8, 5)).ok
     assert controller.remaining_budget == 300

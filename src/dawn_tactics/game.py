@@ -387,7 +387,7 @@ class GameApp:
                 )
                 if row < 3:
                     color = (51, 31, 42)
-                elif row >= battle.height - 3:
+                elif row >= battle.height - 4:
                     color = (25, 45, 67)
                 else:
                     color = (28, 36, 50)
@@ -871,42 +871,42 @@ class GameApp:
         if self.controller.campaign_index is None:
             return
         normal_layouts: tuple[tuple[tuple[str, Position], ...], ...] = (
-            (("infantry", Position(7, 4)), ("tank", Position(7, 6))),
+            (("infantry", Position(8, 5)), ("tank", Position(8, 7))),
             (
-                ("anti_tank", Position(7, 3)),
-                ("anti_tank", Position(7, 5)),
-                ("anti_tank", Position(7, 7)),
-                ("infantry", Position(6, 4)),
-                ("infantry", Position(6, 6)),
+                ("anti_tank", Position(8, 4)),
+                ("anti_tank", Position(8, 6)),
+                ("anti_tank", Position(8, 8)),
+                ("infantry", Position(7, 5)),
+                ("infantry", Position(7, 7)),
             ),
             (
-                ("tank", Position(7, 5)),
-                ("anti_tank", Position(7, 3)),
-                ("artillery", Position(7, 8)),
-                ("infantry", Position(6, 4)),
-                ("infantry", Position(6, 7)),
+                ("tank", Position(8, 6)),
+                ("anti_tank", Position(8, 4)),
+                ("artillery", Position(8, 9)),
+                ("infantry", Position(7, 5)),
+                ("infantry", Position(7, 8)),
             ),
         )
         hard_layouts: tuple[tuple[tuple[str, Position], ...], ...] = (
             (
-                ("infantry", Position(5, 11)),
-                ("artillery", Position(7, 0)),
+                ("infantry", Position(6, 12)),
+                ("artillery", Position(8, 1)),
             ),
             (
+                ("infantry", Position(8, 9)),
+                ("infantry", Position(6, 4)),
+                ("artillery", Position(8, 12)),
+                ("anti_tank", Position(7, 5)),
+                ("infantry", Position(7, 11)),
+            ),
+            (
+                ("anti_tank", Position(8, 5)),
+                ("infantry", Position(7, 2)),
+                ("anti_tank", Position(6, 6)),
+                ("infantry", Position(7, 10)),
+                ("infantry", Position(7, 4)),
                 ("infantry", Position(7, 8)),
-                ("infantry", Position(5, 3)),
-                ("artillery", Position(7, 11)),
-                ("anti_tank", Position(6, 4)),
-                ("infantry", Position(6, 10)),
-            ),
-            (
-                ("anti_tank", Position(7, 4)),
-                ("infantry", Position(6, 1)),
-                ("anti_tank", Position(5, 5)),
-                ("infantry", Position(6, 9)),
-                ("infantry", Position(6, 3)),
-                ("infantry", Position(6, 7)),
-                ("infantry", Position(5, 3)),
+                ("infantry", Position(6, 4)),
             ),
         )
         layouts = (

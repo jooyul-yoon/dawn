@@ -82,7 +82,7 @@ def test_draw_unit_visual_blits_cached_image_over_team_plate(app: GameApp) -> No
     image.fill((0, 0, 0, 0))
     pygame.draw.rect(image, marker, pygame.Rect(20, 20, 8, 8))
     app.unit_images = {"infantry": image}
-    unit = Infantry(1, Team.BLUE, Position(7, 2))
+    unit = Infantry(1, Team.BLUE, Position(9, 3))
     center = (160, 200)
     app.screen.fill(BACKGROUND)
 
@@ -97,7 +97,7 @@ def test_draw_unit_visual_uses_shape_fallback_when_asset_is_missing(
     app: GameApp,
 ) -> None:
     app.unit_images = {}
-    unit = Infantry(1, Team.BLUE, Position(7, 2))
+    unit = Infantry(1, Team.BLUE, Position(9, 3))
     center = (160, 200)
     app.screen.fill(BACKGROUND)
 

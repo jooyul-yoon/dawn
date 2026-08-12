@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Expand the default battlefield from 12×8 to 14×10, adding one playable cell around every side while preserving 64-pixel cells, three-row deployment zones, and combat rules.
+**Goal:** Expand the default battlefield from 12×8 to 14×10, adding one playable cell around every side while preserving 64-pixel cells, translated campaign balance, and combat rules.
 
-**Architecture:** `Battle` owns the authoritative 14×10 default. Campaign enemies migrate by `(row + 1, column + 1)` to center old formations; player/demo layouts migrate into the new bottom-three-row zone. Pygame derives a 896×640 grid, moves the unchanged command panel right, and enlarges the window to 1408×888.
+**Architecture:** `Battle` owns the authoritative 14×10 default. Campaign enemies and player/demo layouts migrate by `(row + 1, column + 1)`; the Blue zone expands to the bottom four rows so translated winning formations remain legal. Pygame derives a 896×640 grid, moves the unchanged command panel right, and enlarges the window to 1408×888.
 
 **Tech Stack:** Python 3.12, pygame-ce 2.5.7, pytest, headless SDL rendering
 
@@ -56,12 +56,12 @@ def test_expanded_battle_rejects_positions_beyond_new_border(
         Battle().add_unit(Infantry(1, Team.BLUE, position))
 
 
-def test_blue_deployment_zone_is_bottom_three_rows_after_expansion() -> None:
+def test_blue_deployment_zone_is_bottom_four_rows_after_expansion() -> None:
     controller = GameController()
     controller.load_campaign(0)
     controller.remaining_budget = Infantry.cost * 4
-    assert not controller.place_blue_unit("infantry", Position(6, 1)).ok
-    for column, row in enumerate((7, 8, 9), start=1):
+    assert not controller.place_blue_unit("infantry", Position(5, 1)).ok
+    for column, row in enumerate((6, 7, 8, 9), start=1):
         assert controller.place_blue_unit("infantry", Position(row, column)).ok
 ```
 
@@ -96,7 +96,7 @@ Run:
   tests/test_domain.py::test_default_battle_is_fourteen_by_ten \
   tests/test_domain.py::test_expanded_battle_accepts_every_new_corner \
   tests/test_domain.py::test_expanded_battle_rejects_positions_beyond_new_border \
-  tests/test_domain.py::test_blue_deployment_zone_is_bottom_three_rows_after_expansion \
+  tests/test_domain.py::test_blue_deployment_zone_is_bottom_four_rows_after_expansion \
   tests/test_domain.py::test_campaign_deployments_shift_one_cell_down_and_right -q
 ```
 
@@ -206,26 +206,24 @@ git commit -m "Expand battlefield presentation"
 Use this mapping only in default `GameController`/`Battle` scenarios:
 
 ```text
-old row 5 -> new row 7
-old row 6 -> new row 8
-old row 7 -> new row 9
+old row R -> new row R + 1
 old column C -> new column C + 1
 ```
 
 Do not alter explicit custom-size `Battle(width=..., height=...)` tests. Examples:
-`(7,4)->(9,5)`, `(7,6)->(9,7)`, `(7,2)->(9,3)`.
+`(7,4)->(8,5)`, `(7,6)->(8,7)`, `(7,2)->(8,3)`.
 
 - [ ] **Step 2: Use these exact normal winning/demo layouts**
 
 ```python
 (
-    (0, (("infantry", Position(9, 5)), ("tank", Position(9, 7)))),
-    (1, (("anti_tank", Position(9, 4)), ("anti_tank", Position(9, 6)),
-         ("anti_tank", Position(9, 8)), ("infantry", Position(8, 5)),
-         ("infantry", Position(8, 7)))),
-    (2, (("tank", Position(9, 6)), ("anti_tank", Position(9, 4)),
-         ("artillery", Position(9, 9)), ("infantry", Position(8, 5)),
-         ("infantry", Position(8, 8)))),
+    (0, (("infantry", Position(8, 5)), ("tank", Position(8, 7)))),
+    (1, (("anti_tank", Position(8, 4)), ("anti_tank", Position(8, 6)),
+         ("anti_tank", Position(8, 8)), ("infantry", Position(7, 5)),
+         ("infantry", Position(7, 7)))),
+    (2, (("tank", Position(8, 6)), ("anti_tank", Position(8, 4)),
+         ("artillery", Position(8, 9)), ("infantry", Position(7, 5)),
+         ("infantry", Position(7, 8)))),
 )
 ```
 
@@ -233,14 +231,14 @@ Do not alter explicit custom-size `Battle(width=..., height=...)` tests. Example
 
 ```python
 (
-    (0, (("infantry", Position(7, 12)), ("artillery", Position(9, 1)))),
-    (1, (("infantry", Position(9, 9)), ("infantry", Position(7, 4)),
-         ("artillery", Position(9, 12)), ("anti_tank", Position(8, 5)),
-         ("infantry", Position(8, 11)))),
-    (2, (("anti_tank", Position(9, 5)), ("infantry", Position(8, 2)),
-         ("anti_tank", Position(7, 6)), ("infantry", Position(8, 10)),
-         ("infantry", Position(8, 4)), ("infantry", Position(8, 8)),
-         ("infantry", Position(7, 4)))),
+    (0, (("infantry", Position(6, 12)), ("artillery", Position(8, 1)))),
+    (1, (("infantry", Position(8, 9)), ("infantry", Position(6, 4)),
+         ("artillery", Position(8, 12)), ("anti_tank", Position(7, 5)),
+         ("infantry", Position(7, 11)))),
+    (2, (("anti_tank", Position(8, 5)), ("infantry", Position(7, 2)),
+         ("anti_tank", Position(6, 6)), ("infantry", Position(7, 10)),
+         ("infantry", Position(7, 4)), ("infantry", Position(7, 8)),
+         ("infantry", Position(6, 4)))),
 )
 ```
 

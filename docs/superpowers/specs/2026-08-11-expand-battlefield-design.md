@@ -4,8 +4,8 @@
 
 Expand the Dawn Tactics battlefield by one playable cell on every side. The
 board grows from 12 columns by 8 rows to 14 columns by 10 rows while preserving
-the current 64-pixel cell size, six-unit interface, three-row deployment zones,
-and combat rules.
+the current 64-pixel cell size, six-unit interface, combat rules, and translated
+campaign balance.
 
 ## Board Geometry
 
@@ -31,16 +31,15 @@ new_position = Position(old.row + 1, old.column + 1)
 
 This applies to every normal and hard enemy deployment in `campaigns.py`.
 
-Player deployment examples and deterministic test layouts are not stored map
-content; they are anchored to the blue deployment zone at the bottom edge.
-Their columns move right by one, while their rows are recalibrated into the new
-bottom three rows (`7`, `8`, and `9`). This keeps setup legal and preserves the
-meaning of the existing examples.
+Player deployment examples and deterministic test layouts also move by one row
+and one column. The Blue deployment zone expands to the bottom four rows so the
+translated formations remain legal and preserve their exact relative distance
+from the translated enemy formations.
 
 ## Deployment Zones
 
 - The red zone remains the top three rows: `0`, `1`, and `2`.
-- The blue zone remains the bottom three rows: `7`, `8`, and `9`.
+- The blue zone expands to the bottom four rows: `6`, `7`, `8`, and `9`.
 - The new outer cells are fully playable during battle.
 - The controller continues to derive the blue-zone boundary from the battle
   height rather than duplicating a fixed row number.
@@ -56,10 +55,10 @@ instead of compressing it toward the new top edge.
 
 - Do not change movement, range, damage, targeting, budgets, unit stats, or
   student-editable rules.
-- Do not add terrain, scrolling, zooming, or additional deployment rows.
-- Deterministic IDs remain derived from deployment coordinates. Expected battle
-  tick counts may change because formations have more space; tests should record
-  the newly verified deterministic results rather than changing combat balance.
+- Do not add terrain, scrolling, or zooming.
+- Deterministic IDs remain derived from deployment coordinates. Translating both
+  teams by the same offset and preserving row `6` as deployable keeps the
+  existing campaign outcomes and click-order determinism reproducible.
 - Lesson examples and built-in demo layouts must use legal positions on the new
   board.
 
@@ -70,7 +69,7 @@ Add or update tests that prove:
 1. A default battle is exactly 14 by 10.
 2. Positions on the new top, bottom, left, and right border cells are inside the
    battlefield, while positions beyond them are rejected.
-3. The blue deployment zone accepts rows 7 through 9 and rejects row 6.
+3. The blue deployment zone accepts rows 6 through 9 and rejects row 5.
 4. Every campaign deployment is inside the expanded board and matches the
    one-row, one-column migration.
 5. Grid click conversion reaches the new bottom-right cell and rejects pixels
@@ -90,5 +89,5 @@ deployment-order regression before completion.
 The player sees two additional columns and two additional rows, with one new
 cell visibly surrounding each side of the old battlefield footprint. All cells
 are clickable and usable during combat, setup remains limited to the bottom
-three rows, campaign formations remain recognizable, and no interface element
-is clipped or overlapped.
+four rows, campaign formations and verified outcomes remain reproducible, and
+no interface element is clipped or overlapped.
