@@ -106,6 +106,83 @@ def test_target_selection_uses_distance_then_hp_then_id() -> None:
     )
 
 
+def test_default_battle_is_fourteen_by_ten() -> None:
+    battle = Battle()
+
+    assert (battle.width, battle.height) == (14, 10)
+
+
+def test_expanded_battle_accepts_every_new_corner() -> None:
+    battle = Battle()
+    positions = (
+        Position(0, 0),
+        Position(0, 13),
+        Position(9, 0),
+        Position(9, 13),
+    )
+
+    for unit_id, position in enumerate(positions, start=1):
+        battle.add_unit(Infantry(unit_id, Team.BLUE, position))
+
+    assert tuple(unit.position for unit in battle.units) == positions
+
+
+@pytest.mark.parametrize(
+    "position",
+    (Position(-1, 0), Position(0, -1), Position(10, 0), Position(0, 14)),
+)
+def test_expanded_battle_rejects_positions_beyond_new_border(
+    position: Position,
+) -> None:
+    with pytest.raises(ValueError, match="outside the battlefield"):
+        Battle().add_unit(Infantry(1, Team.BLUE, position))
+
+
+def test_blue_deployment_zone_is_bottom_three_rows_after_expansion() -> None:
+    controller = GameController()
+    controller.load_campaign(0)
+    controller.remaining_budget = Infantry.cost * 4
+
+    assert not controller.place_blue_unit("infantry", Position(6, 1)).ok
+    for column, row in enumerate((7, 8, 9), start=1):
+        assert controller.place_blue_unit("infantry", Position(row, column)).ok
+
+
+def test_campaign_deployments_shift_one_cell_down_and_right() -> None:
+    expected = (
+        (
+            ("infantry", Position(2, 4)),
+            ("infantry", Position(2, 7)),
+            ("infantry", Position(2, 10)),
+            ("anti_tank", Position(3, 6)),
+        ),
+        (
+            ("tank", Position(2, 5)),
+            ("tank", Position(2, 8)),
+            ("infantry", Position(3, 7)),
+            ("infantry", Position(3, 4)),
+        ),
+        (
+            ("artillery", Position(1, 7)),
+            ("infantry", Position(2, 4)),
+            ("infantry", Position(2, 9)),
+            ("anti_tank", Position(3, 4)),
+            ("tank", Position(3, 6)),
+            ("anti_tank", Position(3, 9)),
+            ("artillery", Position(1, 5)),
+        ),
+    )
+    actual = tuple(
+        tuple(
+            (item.unit_kind, item.position)
+            for item in campaign.enemies + campaign.hard_reinforcements
+        )
+        for campaign in CAMPAIGNS
+    )
+
+    assert actual == expected
+
+
 def test_budget_purchase_invalid_placement_and_full_refund() -> None:
     controller = GameController()
     controller.load_campaign(0)

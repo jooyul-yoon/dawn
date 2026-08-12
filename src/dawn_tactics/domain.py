@@ -260,8 +260,8 @@ UNIT_REGISTRY: dict[str, type[Unit]] = {
 class Battle:
     def __init__(
         self,
-        width: int = 12,
-        height: int = 8,
+        width: int = 14,
+        height: int = 10,
         max_ticks: int = 180,
     ) -> None:
         if width < 2 or height < 2:
