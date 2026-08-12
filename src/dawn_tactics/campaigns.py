@@ -32,6 +32,8 @@ class Campaign:
         "anti_tank",
         "tank",
         "artillery",
+        "machine_gun",
+        "cavalry",
     )
 
     def budget_for(self, difficulty: Difficulty) -> int:
