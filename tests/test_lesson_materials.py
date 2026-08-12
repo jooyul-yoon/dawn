@@ -50,3 +50,14 @@ def test_day_two_materials_cover_rules_and_reset() -> None:
         "Restore",
     ):
         assert required in combined
+
+
+def test_readme_links_day_two_student_materials() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "`1`–`6`" in readme
+    assert "Machine Gun" in readme
+    assert "Cavalry" in readme
+    assert "lessons/lesson_02_conditionals.ipynb" in readme
+    assert "lessons/lesson_02_conditionals_en.ipynb" in readme
+    assert "lessons/lesson_02_curriculum_ko.md" in readme
+    assert "src/dawn_tactics/student_rules.py" in readme
