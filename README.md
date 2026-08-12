@@ -11,7 +11,7 @@ The demo contains:
 - four Python subclasses: `Infantry`, `AntiTank`, `Tank`, and `Artillery`;
 - purchase, deployment, full setup refund, restart, and next-mission flow;
 - deterministic grid movement and simultaneous combat damage;
-- abstract, non-graphic presentation made entirely with pygame shapes.
+- abstract, non-graphic presentation with illustrated unit miniatures and pygame effects.
 
 ## Double-click launchers
 
@@ -109,6 +109,13 @@ lessons they move into `src/dawn_tactics/domain.py`, where the `Unit` base class
 and four subclasses expose state, methods, inheritance, and an overridden
 anti-tank damage rule. Rendering and input live separately in `game.py`, so a
 rule change can be tested without knowing pygame first.
+
+## Unit image assets
+
+Battlefield and selection-card images live in
+`src/dawn_tactics/assets/units/`. The same neutral PNG is reused for both teams;
+pygame's Blue and Red team plates identify ownership. If an asset is missing or
+invalid, the game falls back to its original geometric unit symbol.
 
 ## Save a preview image
 
