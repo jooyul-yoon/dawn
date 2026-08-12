@@ -52,6 +52,8 @@ Artillery, Infantry, Tank 카드를 Cavalry 규칙에 차례로 넣는다. Pytho
 ### 52–60분 — 실제 규칙 읽기
 
 `student_rules.py`를 열고 function 구조는 제공된 것이라고 설명한다.
+파일을 저장한 뒤 notebook의 preview cell을 다시 실행하면 `importlib.reload`가
+최신 rule을 읽어온다는 점을 확인한다.
 
 ### 60–75분 — 통제된 게임 실험
 
@@ -60,9 +62,9 @@ Machine Gun의 `LIGHT`를 `HEAVY`로 한 줄만 바꾸고 같은 배치를 비�
 
 ### 75–83분 — 학생 선택 실험
 
-- Cavalry의 Artillery damage를 5에서 1로 변경
+- Cavalry의 Infantry damage를 3에서 1로 변경
 - Cavalry의 `elif` target을 Infantry에서 Anti-Tank로 변경
-- Machine Gun의 HEAVY damage를 1에서 0으로 변경
+- Machine Gun의 LIGHT damage를 4에서 0으로 변경
 
 ### 83–88분 — Exit ticket
 
