@@ -38,6 +38,8 @@ UNIT_ASSET_FILES = {
     "anti_tank": "anti_tank.png",
     "tank": "tank.png",
     "artillery": "artillery.png",
+    "machine_gun": "machine_gun.png",
+    "cavalry": "cavalry.png",
 }
 BATTLE_UNIT_IMAGE_SIZE = (48, 48)
 CARD_UNIT_IMAGE_SIZE = (44, 44)

@@ -13,6 +13,7 @@ from dawn_tactics.game import (
     GameApp,
     UNIT_ASSET_DIR,
     UNIT_ASSET_FILES,
+    UNIT_KINDS,
     _load_unit_images,
 )
 
@@ -38,7 +39,10 @@ def test_unit_asset_registry_matches_every_unit_kind() -> None:
         "anti_tank": "anti_tank.png",
         "tank": "tank.png",
         "artillery": "artillery.png",
+        "machine_gun": "machine_gun.png",
+        "cavalry": "cavalry.png",
     }
+    assert tuple(UNIT_ASSET_FILES) == UNIT_KINDS
     assert all(
         (UNIT_ASSET_DIR / filename).is_file()
         for filename in UNIT_ASSET_FILES.values()
