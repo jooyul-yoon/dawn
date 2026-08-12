@@ -493,6 +493,19 @@ class GameApp:
                     width=3,
                 )
 
+    def _draw_unit_card_visual(self, kind: str, rect: pygame.Rect) -> bool:
+        center = (rect.x + 27, rect.centery)
+        pygame.draw.circle(self.screen, (18, 25, 39), center, 25)
+        image = self.unit_card_images.get(kind)
+        if image is not None:
+            self.screen.blit(image, image.get_rect(center=center))
+            return True
+
+        unit_class = UNIT_REGISTRY[kind]
+        preview = unit_class(0, Team.BLUE, Position(0, 0))
+        self._draw_unit_shape(preview, center, BLUE)
+        return False
+
     def _draw_side_panel(self) -> None:
         panel_rect = pygame.Rect(PANEL_LEFT, 20, PANEL_WIDTH, 720)
         pygame.draw.rect(self.screen, PANEL, panel_rect, border_radius=16)
@@ -539,18 +552,20 @@ class GameApp:
                 width=3 if selected else 1,
                 border_radius=10,
             )
+            self._draw_unit_card_visual(kind, rect)
+            text_x = rect.x + 56
             name_color = TEXT if affordable else (113, 121, 137)
             self._draw_text(
                 unit_class.display_name,
                 self.fonts["body"],
                 name_color,
-                (rect.x + 12, rect.y + 10),
+                (text_x, rect.y + 10),
             )
             self._draw_text(
                 f"${unit_class.cost}  HP {unit_class.max_hp}",
                 self.fonts["small"],
                 GREEN if affordable else (99, 106, 119),
-                (rect.x + 12, rect.y + 39),
+                (text_x, rect.y + 39),
             )
             rule_text = (
                 f"DMG {unit_class.base_damage} / "
@@ -562,7 +577,7 @@ class GameApp:
                 rule_text,
                 self.fonts["tiny"],
                 MUTED,
-                (rect.x + 12, rect.y + 65),
+                (text_x, rect.y + 65),
             )
 
         start_rect = self._start_rect()

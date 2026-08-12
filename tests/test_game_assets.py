@@ -101,3 +101,28 @@ def test_draw_unit_visual_uses_shape_fallback_when_asset_is_missing(
 
     assert not used_image
     assert app.screen.get_at(center) != BACKGROUND
+
+
+def test_draw_unit_card_visual_blits_cached_image(app: GameApp) -> None:
+    marker = (214, 137, 29, 255)
+    image = pygame.Surface(CARD_UNIT_IMAGE_SIZE, pygame.SRCALPHA)
+    image.fill(marker)
+    app.unit_card_images = {"tank": image}
+    card = pygame.Rect(100, 100, 174, 92)
+    app.screen.fill(BACKGROUND)
+
+    used_image = app._draw_unit_card_visual("tank", card)
+
+    assert used_image
+    assert app.screen.get_at((card.x + 27, card.centery)) == marker
+
+
+def test_draw_unit_card_visual_uses_shape_fallback(app: GameApp) -> None:
+    app.unit_card_images = {}
+    card = pygame.Rect(100, 100, 174, 92)
+    app.screen.fill(BACKGROUND)
+
+    used_image = app._draw_unit_card_visual("tank", card)
+
+    assert not used_image
+    assert app.screen.get_at((card.x + 27, card.centery)) != BACKGROUND
