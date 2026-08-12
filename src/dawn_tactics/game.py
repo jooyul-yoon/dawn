@@ -386,8 +386,7 @@ class GameApp:
         for unit in self.controller.battle.living_units:
             center = self._cell_center(unit.position)
             color = BLUE if unit.team is Team.BLUE else RED
-            pygame.draw.circle(self.screen, (8, 12, 20), (center[0] + 3, center[1] + 4), 24)
-            self._draw_unit_shape(unit, center, color)
+            self._draw_unit_visual(unit, center, color)
             hp_ratio = unit.hp / unit.max_hp
             bar = pygame.Rect(center[0] - 23, center[1] - 31, 46, 6)
             pygame.draw.rect(self.screen, (54, 24, 31), bar, border_radius=3)
@@ -404,6 +403,34 @@ class GameApp:
                 (center[0], center[1] + 21),
                 center=True,
             )
+
+    def _draw_unit_visual(
+        self,
+        unit: Unit,
+        center: tuple[int, int],
+        color: tuple[int, int, int],
+    ) -> bool:
+        image = self.unit_images.get(unit.kind)
+        if image is None:
+            pygame.draw.circle(
+                self.screen,
+                (8, 12, 20),
+                (center[0] + 3, center[1] + 4),
+                24,
+            )
+            self._draw_unit_shape(unit, center, color)
+            return False
+
+        pygame.draw.circle(
+            self.screen,
+            (8, 12, 20),
+            (center[0] + 3, center[1] + 4),
+            25,
+        )
+        pygame.draw.circle(self.screen, color, center, 24)
+        pygame.draw.circle(self.screen, (238, 243, 250), center, 24, width=2)
+        self.screen.blit(image, image.get_rect(center=center))
+        return True
 
     def _draw_unit_shape(
         self,

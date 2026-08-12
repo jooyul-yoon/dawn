@@ -3,9 +3,14 @@ from pathlib import Path
 import pygame
 import pytest
 
+from dawn_tactics.campaigns import Difficulty
+from dawn_tactics.domain import Infantry, Position, Team
 from dawn_tactics.game import (
+    BACKGROUND,
     BATTLE_UNIT_IMAGE_SIZE,
+    BLUE,
     CARD_UNIT_IMAGE_SIZE,
+    GameApp,
     UNIT_ASSET_DIR,
     UNIT_ASSET_FILES,
     _load_unit_images,
@@ -17,6 +22,13 @@ def pygame_display() -> None:
     pygame.init()
     pygame.display.set_mode((1, 1))
     yield
+    pygame.quit()
+
+
+@pytest.fixture
+def app() -> GameApp:
+    game = GameApp(Difficulty.NORMAL)
+    yield game
     pygame.quit()
 
 
@@ -58,3 +70,34 @@ def test_load_unit_images_skips_missing_and_invalid_files(
 
     assert set(images) == {"tank"}
     assert images["tank"].get_size() == (8, 8)
+
+
+def test_draw_unit_visual_blits_cached_image_over_team_plate(app: GameApp) -> None:
+    marker = (17, 219, 83, 255)
+    image = pygame.Surface(BATTLE_UNIT_IMAGE_SIZE, pygame.SRCALPHA)
+    image.fill((0, 0, 0, 0))
+    pygame.draw.rect(image, marker, pygame.Rect(20, 20, 8, 8))
+    app.unit_images = {"infantry": image}
+    unit = Infantry(1, Team.BLUE, Position(7, 2))
+    center = (160, 200)
+    app.screen.fill(BACKGROUND)
+
+    used_image = app._draw_unit_visual(unit, center, BLUE)
+
+    assert used_image
+    assert app.screen.get_at(center) == marker
+    assert app.screen.get_at((center[0] + 20, center[1])).b > 150
+
+
+def test_draw_unit_visual_uses_shape_fallback_when_asset_is_missing(
+    app: GameApp,
+) -> None:
+    app.unit_images = {}
+    unit = Infantry(1, Team.BLUE, Position(7, 2))
+    center = (160, 200)
+    app.screen.fill(BACKGROUND)
+
+    used_image = app._draw_unit_visual(unit, center, BLUE)
+
+    assert not used_image
+    assert app.screen.get_at(center) != BACKGROUND
