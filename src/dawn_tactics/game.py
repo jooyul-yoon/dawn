@@ -22,14 +22,14 @@ from .settings_validation import validate_student_settings
 from .student_rules_validation import validate_student_rules
 
 
-WINDOW_SIZE = (1280, 760)
+WINDOW_SIZE = (1408, 888)
 FPS = 60
 GRID_LEFT = 40
 GRID_TOP = 150
 CELL_SIZE = 64
-GRID_WIDTH = 12 * CELL_SIZE
-GRID_HEIGHT = 8 * CELL_SIZE
-PANEL_LEFT = 840
+GRID_WIDTH = 14 * CELL_SIZE
+GRID_HEIGHT = 10 * CELL_SIZE
+PANEL_LEFT = GRID_LEFT + GRID_WIDTH + 32
 PANEL_WIDTH = 400
 SIMULATION_SECONDS = settings.BATTLE_STEP_SECONDS
 UNIT_ASSET_DIR = Path(__file__).resolve().parent / "assets" / "units"

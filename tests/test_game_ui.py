@@ -10,7 +10,17 @@ import pytest
 
 from dawn_tactics.campaigns import Difficulty
 from dawn_tactics.domain import Position
-from dawn_tactics.game import GameApp, unit_rule_text
+from dawn_tactics.game import (
+    CELL_SIZE,
+    GRID_HEIGHT,
+    GRID_LEFT,
+    GRID_TOP,
+    GRID_WIDTH,
+    PANEL_LEFT,
+    WINDOW_SIZE,
+    GameApp,
+    unit_rule_text,
+)
 
 
 @pytest.fixture
@@ -54,6 +64,24 @@ def test_unit_cards_show_six_non_overlapping_choices(app: GameApp) -> None:
     assert not app._start_rect().colliderect(app._menu_rect())
     assert not app._restart_rect().colliderect(app._status_rect())
     assert not app._menu_rect().colliderect(app._status_rect())
+    grid_rect = pygame.Rect(GRID_LEFT, GRID_TOP, GRID_WIDTH, GRID_HEIGHT)
+    assert all(not rect.colliderect(grid_rect) for rect in values)
+
+
+def test_expanded_window_grid_and_panel_geometry(app: GameApp) -> None:
+    assert WINDOW_SIZE == (1408, 888)
+    assert app.screen.get_size() == WINDOW_SIZE
+    assert GRID_WIDTH == 14 * CELL_SIZE == 896
+    assert GRID_HEIGHT == 10 * CELL_SIZE == 640
+    assert PANEL_LEFT == GRID_LEFT + GRID_WIDTH + 32 == 968
+
+
+def test_mouse_conversion_reaches_new_bottom_right_cell(app: GameApp) -> None:
+    inside = (GRID_LEFT + GRID_WIDTH - 1, GRID_TOP + GRID_HEIGHT - 1)
+
+    assert app._mouse_to_grid(inside) == Position(9, 13)
+    assert app._mouse_to_grid((GRID_LEFT + GRID_WIDTH, inside[1])) is None
+    assert app._mouse_to_grid((inside[0], GRID_TOP + GRID_HEIGHT)) is None
 
 
 def test_number_keys_five_and_six_select_new_units(app: GameApp) -> None:
@@ -77,8 +105,8 @@ def test_rule_text_fits_beside_each_card_visual(app: GameApp) -> None:
 
 def test_six_card_setup_screen_renders(tmp_path: Path, app: GameApp) -> None:
     app._load_campaign(0)
-    assert app.controller.place_blue_unit("machine_gun", Position(7, 4)).ok
-    assert app.controller.place_blue_unit("cavalry", Position(7, 6)).ok
+    assert app.controller.place_blue_unit("machine_gun", Position(9, 5)).ok
+    assert app.controller.place_blue_unit("cavalry", Position(9, 7)).ok
     app.draw()
     output = tmp_path / "day-2-setup.png"
     pygame.image.save(app.screen, output)
