@@ -31,6 +31,15 @@ GRID_HEIGHT = 8 * CELL_SIZE
 PANEL_LEFT = 840
 PANEL_WIDTH = 400
 SIMULATION_SECONDS = settings.BATTLE_STEP_SECONDS
+UNIT_ASSET_DIR = Path(__file__).resolve().parent / "assets" / "units"
+UNIT_ASSET_FILES = {
+    "infantry": "infantry.png",
+    "anti_tank": "anti_tank.png",
+    "tank": "tank.png",
+    "artillery": "artillery.png",
+}
+BATTLE_UNIT_IMAGE_SIZE = (48, 48)
+CARD_UNIT_IMAGE_SIZE = (44, 44)
 
 BACKGROUND = (13, 18, 30)
 PANEL = (25, 33, 50)
@@ -43,6 +52,20 @@ RED = (237, 91, 105)
 GREEN = (83, 204, 142)
 
 
+def _load_unit_images(
+    size: tuple[int, int],
+    asset_dir: Path = UNIT_ASSET_DIR,
+) -> dict[str, pygame.Surface]:
+    images: dict[str, pygame.Surface] = {}
+    for kind, filename in UNIT_ASSET_FILES.items():
+        try:
+            source = pygame.image.load(asset_dir / filename).convert_alpha()
+        except (FileNotFoundError, pygame.error):
+            continue
+        images[kind] = pygame.transform.smoothscale(source, size)
+    return images
+
+
 class GameApp:
     def __init__(
         self,
@@ -52,6 +75,8 @@ class GameApp:
         pygame.init()
         pygame.display.set_caption(settings.GAME_TITLE.title())
         self.screen = pygame.display.set_mode(WINDOW_SIZE)
+        self.unit_images = _load_unit_images(BATTLE_UNIT_IMAGE_SIZE)
+        self.unit_card_images = _load_unit_images(CARD_UNIT_IMAGE_SIZE)
         self.clock = pygame.time.Clock()
         self.fonts = {
             "title": pygame.font.Font(None, 64),
