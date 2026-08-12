@@ -63,6 +63,7 @@ def test_preview_cell_reloads_rules_after_student_edits() -> None:
     preview = _cell_source(_load(KOREAN_NOTEBOOK), "preview-rules")
     assert "import importlib" in preview
     assert "rules = importlib.reload(rules)" in preview
+    assert "validate_student_rules()" in preview
 
 
 def test_campaign_one_experiments_use_targets_present_in_campaign_one() -> None:
@@ -92,3 +93,7 @@ def test_readme_links_day_two_student_materials() -> None:
     assert "lessons/lesson_02_conditionals_en.ipynb" in readme
     assert "lessons/lesson_02_curriculum_ko.md" in readme
     assert "src/dawn_tactics/student_rules.py" in readme
+    assert "](lessons/lesson_02_conditionals.ipynb)" in readme
+    assert "](lessons/lesson_02_conditionals_en.ipynb)" in readme
+    assert "](lessons/lesson_02_curriculum_ko.md)" in readme
+    assert "](src/dawn_tactics/student_rules.py)" in readme

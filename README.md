@@ -108,10 +108,10 @@ printed at the end of the notebook after class.
 Lesson 02 adds Machine Gun and Cavalry. Their damage decisions live in a small
 student file so `if`, `elif`, and `else` visibly change real battles.
 
-- Korean/bilingual student notebook: `lessons/lesson_02_conditionals.ipynb`
-- English student notebook: `lessons/lesson_02_conditionals_en.ipynb`
-- Korean teacher guide: `lessons/lesson_02_curriculum_ko.md`
-- Safe conditional rules: `src/dawn_tactics/student_rules.py`
+- [Korean/bilingual student notebook](lessons/lesson_02_conditionals.ipynb)
+- [English student notebook](lessons/lesson_02_conditionals_en.ipynb)
+- [Korean teacher guide](lessons/lesson_02_curriculum_ko.md)
+- [Safe conditional rules](src/dawn_tactics/student_rules.py)
 
 Use Normal Campaign 1 for the core experiment. Machine Gun costs $300 and
 Cavalry costs $200, so both fit the original $500 budget. Restore the default
