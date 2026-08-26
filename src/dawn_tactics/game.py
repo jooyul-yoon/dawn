@@ -7,7 +7,7 @@ from pathlib import Path
 import pygame
 
 from . import student_settings as settings
-from .campaigns import CAMPAIGNS, Difficulty
+from .campaigns import CAMPAIGNS, VERIFIED_BLUE_LAYOUTS, Difficulty
 from .controller import GameController
 from .domain import (
     DEFAULT_BATTLE_HEIGHT,
@@ -889,52 +889,14 @@ class GameApp:
     def prepare_demo_layout(self) -> None:
         if self.controller.campaign_index is None:
             return
-        normal_layouts: tuple[tuple[tuple[str, Position], ...], ...] = (
-            (("infantry", Position(9, 5)), ("tank", Position(9, 7))),
-            (
-                ("anti_tank", Position(9, 4)),
-                ("anti_tank", Position(9, 6)),
-                ("anti_tank", Position(9, 8)),
-                ("infantry", Position(8, 5)),
-                ("infantry", Position(8, 7)),
-            ),
-            (
-                ("tank", Position(9, 6)),
-                ("anti_tank", Position(9, 4)),
-                ("artillery", Position(9, 9)),
-                ("infantry", Position(8, 5)),
-                ("infantry", Position(8, 8)),
-            ),
-        )
-        hard_layouts: tuple[tuple[tuple[str, Position], ...], ...] = (
-            (
-                ("infantry", Position(7, 12)),
-                ("artillery", Position(9, 1)),
-            ),
-            (
-                ("infantry", Position(9, 9)),
-                ("infantry", Position(7, 4)),
-                ("artillery", Position(9, 12)),
-                ("anti_tank", Position(8, 5)),
-                ("infantry", Position(8, 11)),
-            ),
-            (
-                ("anti_tank", Position(9, 5)),
-                ("infantry", Position(8, 2)),
-                ("anti_tank", Position(7, 6)),
-                ("infantry", Position(8, 10)),
-                ("infantry", Position(8, 4)),
-                ("infantry", Position(8, 8)),
-                ("infantry", Position(7, 4)),
-            ),
-        )
-        layouts = (
-            hard_layouts
-            if self.controller.difficulty is Difficulty.HARD
-            else normal_layouts
-        )
-        for kind, position in layouts[self.controller.campaign_index]:
-            self.controller.place_blue_unit(kind, position)
+        layout = VERIFIED_BLUE_LAYOUTS[self.controller.difficulty][
+            self.controller.campaign_index
+        ]
+        for deployment in layout:
+            self.controller.place_blue_unit(
+                deployment.unit_kind,
+                deployment.position,
+            )
 
 
 def build_parser() -> argparse.ArgumentParser:

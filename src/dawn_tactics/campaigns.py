@@ -110,3 +110,49 @@ CAMPAIGNS: tuple[Campaign, ...] = (
         ),
     ),
 )
+
+
+VERIFIED_BLUE_LAYOUTS: dict[
+    Difficulty,
+    tuple[tuple[Deployment, ...], ...],
+] = {
+    Difficulty.NORMAL: (
+        (
+            Deployment("infantry", Position(9, 4)),
+            Deployment("tank", Position(8, 8)),
+        ),
+        (
+            Deployment("anti_tank", Position(8, 4)),
+            Deployment("anti_tank", Position(8, 7)),
+            Deployment("anti_tank", Position(8, 10)),
+            Deployment("infantry", Position(10, 5)),
+            Deployment("infantry", Position(10, 9)),
+        ),
+        (
+            Deployment("tank", Position(10, 6)),
+            Deployment("anti_tank", Position(10, 4)),
+            Deployment("artillery", Position(10, 9)),
+            Deployment("infantry", Position(11, 5)),
+            Deployment("infantry", Position(11, 8)),
+        ),
+    ),
+    Difficulty.HARD: (
+        (
+            Deployment("infantry", Position(8, 6)),
+            Deployment("artillery", Position(9, 8)),
+        ),
+        (
+            Deployment("infantry", Position(8, 3)),
+            Deployment("infantry", Position(8, 7)),
+            Deployment("artillery", Position(11, 7)),
+            Deployment("anti_tank", Position(8, 10)),
+            Deployment("infantry", Position(10, 7)),
+        ),
+        (
+            Deployment("machine_gun", Position(11, 4)),
+            Deployment("tank", Position(11, 1)),
+            Deployment("infantry", Position(10, 1)),
+            Deployment("cavalry", Position(9, 1)),
+        ),
+    ),
+}

@@ -8,8 +8,8 @@ from pathlib import Path
 import pygame
 import pytest
 
-from dawn_tactics.campaigns import Difficulty
-from dawn_tactics.domain import Position
+from dawn_tactics.campaigns import VERIFIED_BLUE_LAYOUTS, Difficulty
+from dawn_tactics.domain import Position, Team
 from dawn_tactics.game import (
     BATTLE_HP_BAR_SIZE,
     BLUE_ZONE_COLOR,
@@ -166,3 +166,28 @@ def test_six_card_setup_screen_renders(tmp_path: Path, app: GameApp) -> None:
     output = tmp_path / "day-2-setup.png"
     pygame.image.save(app.screen, output)
     assert output.stat().st_size > 10_000
+
+
+@pytest.mark.parametrize("difficulty", (Difficulty.NORMAL, Difficulty.HARD))
+@pytest.mark.parametrize("campaign_index", (0, 1, 2))
+def test_prepare_demo_layout_uses_verified_campaign_data(
+    difficulty: Difficulty,
+    campaign_index: int,
+) -> None:
+    app = GameApp(difficulty)
+    try:
+        app._load_campaign(campaign_index)
+        app.prepare_demo_layout()
+        actual = tuple(
+            (unit.kind, unit.position)
+            for unit in app.controller.battle.units
+            if unit.team is Team.BLUE
+        )
+        expected = tuple(
+            (item.unit_kind, item.position)
+            for item in VERIFIED_BLUE_LAYOUTS[difficulty][campaign_index]
+        )
+
+        assert actual == expected
+    finally:
+        pygame.quit()
