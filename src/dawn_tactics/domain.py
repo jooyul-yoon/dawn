@@ -9,6 +9,11 @@ from . import student_settings as settings
 from .student_rules_validation import cavalry_damage_for, machine_gun_damage_for
 
 
+DEFAULT_BATTLE_WIDTH = 14
+DEFAULT_BATTLE_HEIGHT = 12
+TERRITORY_DEPTH = 5
+
+
 class Team(str, Enum):
     BLUE = "blue"
     RED = "red"
@@ -260,8 +265,8 @@ UNIT_REGISTRY: dict[str, type[Unit]] = {
 class Battle:
     def __init__(
         self,
-        width: int = 14,
-        height: int = 10,
+        width: int = DEFAULT_BATTLE_WIDTH,
+        height: int = DEFAULT_BATTLE_HEIGHT,
         max_ticks: int = 180,
     ) -> None:
         if width < 2 or height < 2:

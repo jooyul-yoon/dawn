@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from .campaigns import CAMPAIGNS, Campaign, Difficulty
 from .domain import (
+    TERRITORY_DEPTH,
     UNIT_REGISTRY,
     Battle,
     BattleEvent,
@@ -61,7 +62,7 @@ class GameController:
             return ActionResult(False, "Unknown unit type.")
         if not self._inside(position):
             return ActionResult(False, "Choose a cell inside the grid.")
-        if position.row < self.battle.height - 4:
+        if position.row < self.battle.height - TERRITORY_DEPTH:
             return ActionResult(False, "Deploy inside the blue zone.")
         if self.battle.unit_at(position) is not None:
             return ActionResult(False, "That cell is occupied.")
