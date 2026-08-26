@@ -117,13 +117,27 @@ Use Normal Campaign 1 for the core experiment. Machine Gun costs $300 and
 Cavalry costs $200, so both fit the original $500 budget. Restore the default
 rules printed at the end of the notebook after class.
 
+## Lesson 03: Functions
+
+Lesson 03 is a notebook-only mission-planning lesson. Dawn defines and calls
+small functions, supplies parameters and arguments, compares `print` with a
+return value, uses a local variable, connects function outputs and inputs, and
+writes `deployment_report()` from its `def` line.
+
+- [Korean/bilingual student notebook](lessons/lesson_03_functions.ipynb)
+- [English student notebook](lessons/lesson_03_functions_en.ipynb)
+- [Korean teacher guide](lessons/lesson_03_curriculum_ko.md)
+
+The core vocabulary is definition, function call, parameter, argument, return
+value, and local variable. This lesson does not edit or rebalance the game.
+
 ## Teaching boundary
 
 In Lesson 01 students edit `student_settings.py`; in Lesson 02 they edit
-`student_rules.py`. Both files keep early lessons away from pygame and class
-internals. Later OOP lessons move into `domain.py`, where the `Unit` base class
-and six subclasses expose state, methods, inheritance, and overridden damage
-rules.
+`student_rules.py`. Lesson 03 stays in notebooks while students create
+functions from scratch without changing the game. Later OOP lessons move into
+`domain.py`, where the `Unit` base class and six subclasses expose state,
+methods, inheritance, and overridden damage rules.
 
 ## Unit image assets
 
