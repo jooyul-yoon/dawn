@@ -67,13 +67,13 @@ CAMPAIGNS: tuple[Campaign, ...] = (
         history_note="Combined roles are often stronger than one unit type alone.",
         starting_budget=settings.FIRST_DEPLOYMENT_BUDGET,
         enemies=(
-            Deployment("infantry", Position(2, 4)),
-            Deployment("infantry", Position(2, 7)),
-            Deployment("infantry", Position(2, 10)),
+            Deployment("infantry", Position(3, 2)),
+            Deployment("infantry", Position(3, 7)),
+            Deployment("infantry", Position(3, 12)),
         ),
         hard_budget_penalty=50,
         hard_reinforcements=(
-            Deployment("anti_tank", Position(3, 6)),
+            Deployment("anti_tank", Position(2, 7)),
         ),
     ),
     Campaign(
@@ -82,13 +82,13 @@ CAMPAIGNS: tuple[Campaign, ...] = (
         history_note="Anti-tank teams trade protection for specialized firepower.",
         starting_budget=settings.TANK_BREAKER_BUDGET,
         enemies=(
-            Deployment("tank", Position(2, 5)),
-            Deployment("tank", Position(2, 8)),
-            Deployment("infantry", Position(3, 7)),
+            Deployment("tank", Position(3, 4)),
+            Deployment("tank", Position(3, 10)),
+            Deployment("infantry", Position(4, 7)),
         ),
         hard_budget_penalty=100,
         hard_reinforcements=(
-            Deployment("infantry", Position(3, 4)),
+            Deployment("infantry", Position(4, 2)),
         ),
     ),
     Campaign(
@@ -98,15 +98,15 @@ CAMPAIGNS: tuple[Campaign, ...] = (
         starting_budget=settings.COMBINED_ARMS_BUDGET,
         enemies=(
             Deployment("artillery", Position(1, 7)),
-            Deployment("infantry", Position(2, 4)),
-            Deployment("infantry", Position(2, 9)),
-            Deployment("anti_tank", Position(3, 4)),
-            Deployment("tank", Position(3, 6)),
-            Deployment("anti_tank", Position(3, 9)),
+            Deployment("infantry", Position(3, 2)),
+            Deployment("infantry", Position(3, 12)),
+            Deployment("anti_tank", Position(4, 4)),
+            Deployment("anti_tank", Position(4, 10)),
+            Deployment("tank", Position(4, 7)),
         ),
         hard_budget_penalty=200,
         hard_reinforcements=(
-            Deployment("artillery", Position(1, 5)),
+            Deployment("artillery", Position(1, 11)),
         ),
     ),
 )
