@@ -111,6 +111,13 @@ def _battle_hp_bar_rect(center: tuple[int, int]) -> pygame.Rect:
     )
 
 
+def _deployment_zone_label_position(battle_height: int) -> tuple[int, int]:
+    return (
+        GRID_LEFT + 10,
+        GRID_TOP + (battle_height - TERRITORY_DEPTH) * CELL_SIZE + 8,
+    )
+
+
 class GameApp:
     def __init__(
         self,
@@ -428,7 +435,7 @@ class GameApp:
             "YOUR DEPLOYMENT ZONE",
             self.fonts["tiny"],
             (105, 157, 205),
-            (GRID_LEFT + 10, GRID_TOP + GRID_HEIGHT - 24),
+            _deployment_zone_label_position(battle.height),
         )
 
     def _draw_units(self) -> None:

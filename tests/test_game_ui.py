@@ -27,6 +27,7 @@ from dawn_tactics.game import (
     WINDOW_SIZE,
     GameApp,
     _battle_hp_bar_rect,
+    _deployment_zone_label_position,
     unit_rule_text,
 )
 
@@ -117,6 +118,38 @@ def test_grid_draws_five_red_two_neutral_and_five_blue_rows(app: GameApp) -> Non
         *(NEUTRAL_ZONE_COLOR for _ in range(2)),
         *(BLUE_ZONE_COLOR for _ in range(5)),
     )
+
+
+def test_deployment_zone_label_avoids_hard_campaign_three_units() -> None:
+    app = GameApp(Difficulty.HARD)
+    try:
+        app._load_campaign(2)
+        app.prepare_demo_layout()
+        label_position = _deployment_zone_label_position(
+            app.controller.battle.height
+        )
+        label_rect = app.fonts["tiny"].render(
+            "YOUR DEPLOYMENT ZONE",
+            True,
+            (255, 255, 255),
+        ).get_rect(topleft=label_position)
+        blue_cells = []
+        for unit in app.controller.battle.units:
+            if unit.team is not Team.BLUE:
+                continue
+            center = app._cell_center(unit.position)
+            blue_cells.append(
+                pygame.Rect(
+                    center[0] - CELL_SIZE // 2,
+                    center[1] - CELL_SIZE // 2,
+                    CELL_SIZE,
+                    CELL_SIZE,
+                )
+            )
+
+        assert all(not label_rect.colliderect(cell) for cell in blue_cells)
+    finally:
+        pygame.quit()
 
 
 def test_hp_bar_and_text_fit_inside_a_fifty_six_pixel_cell(app: GameApp) -> None:
