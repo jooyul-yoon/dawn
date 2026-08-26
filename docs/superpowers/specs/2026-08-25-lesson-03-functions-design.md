@@ -213,14 +213,14 @@ produces the value the function should return.
 
 ### 8. Final Independent Challenge
 
-The student notebook supplies this signature and docstring but no completed
-body:
+The student notebook supplies only English prompt comments. Dawn types the
+signature, docstring, body, local variables, function calls, and return
+statement:
 
 ```python
-def deployment_report(unit_name, unit_cost, count, budget):
-    """Return one deployment cost and budget report."""
-    # Write the function body here.
-    pass
+# Write deployment_report() from its def line.
+# Parameters: unit_name, unit_cost, count, budget
+# Return the exact deployment report described above.
 ```
 
 The required behavior is:
@@ -250,8 +250,8 @@ assert deployment_report("Cavalry", 200, 2, 500) == (
 print("Mission complete: your function passed every check!")
 ```
 
-The incomplete function cell is tagged `student-task`. It intentionally fails
-the following self-check until the learner implements it. Automated lesson
+The prompt-only function cell is tagged `student-task`. The following
+self-check fails until the learner implements the function. Automated lesson
 tests execute every completed example before this cell, then inspect rather
 than execute the student task and self-check cells.
 
@@ -356,8 +356,9 @@ Create `tests/test_lesson_03_materials.py` to prove:
 6. examples before `student-task` execute sequentially in an isolated namespace;
 7. `total_cost`, `remaining_budget`, and `can_deploy` return the documented
    values after example execution;
-8. `student-task` contains the signature, docstring, comment, and `pass`, but
-   not the reference solution's two function calls or f-string;
+8. `student-task` contains the three exact prompt comments but no
+   `def deployment_report`, reference-solution function calls, f-string, or
+   `pass` placeholder;
 9. `student-self-check` contains both exact assertions and its required tag;
 10. the teacher guide contains the exact reference solution and 90-minute
     progression;
