@@ -11,14 +11,22 @@ import pytest
 from dawn_tactics.campaigns import Difficulty
 from dawn_tactics.domain import Position
 from dawn_tactics.game import (
+    BATTLE_HP_BAR_SIZE,
+    BLUE_ZONE_COLOR,
     CELL_SIZE,
+    ENEMY_ZONE_COLOR,
     GRID_HEIGHT,
     GRID_LEFT,
     GRID_TOP,
     GRID_WIDTH,
+    HP_TEXT_OFFSET_Y,
+    NEUTRAL_ZONE_COLOR,
+    PANEL_HEIGHT,
     PANEL_LEFT,
+    PANEL_WIDTH,
     WINDOW_SIZE,
     GameApp,
+    _battle_hp_bar_rect,
     unit_rule_text,
 )
 
@@ -68,20 +76,67 @@ def test_unit_cards_show_six_non_overlapping_choices(app: GameApp) -> None:
     assert all(not rect.colliderect(grid_rect) for rect in values)
 
 
-def test_expanded_window_grid_and_panel_geometry(app: GameApp) -> None:
-    assert WINDOW_SIZE == (1408, 888)
+def test_five_row_window_grid_and_panel_geometry(app: GameApp) -> None:
+    assert WINDOW_SIZE == (1280, 888)
     assert app.screen.get_size() == WINDOW_SIZE
-    assert GRID_WIDTH == 14 * CELL_SIZE == 896
-    assert GRID_HEIGHT == 10 * CELL_SIZE == 640
-    assert PANEL_LEFT == GRID_LEFT + GRID_WIDTH + 32 == 968
+    assert CELL_SIZE == 56
+    assert GRID_WIDTH == 14 * CELL_SIZE == 784
+    assert GRID_HEIGHT == 12 * CELL_SIZE == 672
+    assert PANEL_LEFT == GRID_LEFT + GRID_WIDTH + 32 == 856
+    assert PANEL_WIDTH == 400
+    assert PANEL_HEIGHT == GRID_TOP + GRID_HEIGHT - 20 == 802
+    assert PANEL_LEFT + PANEL_WIDTH <= WINDOW_SIZE[0]
+    assert 20 + PANEL_HEIGHT == GRID_TOP + GRID_HEIGHT
 
 
 def test_mouse_conversion_reaches_new_bottom_right_cell(app: GameApp) -> None:
     inside = (GRID_LEFT + GRID_WIDTH - 1, GRID_TOP + GRID_HEIGHT - 1)
 
-    assert app._mouse_to_grid(inside) == Position(9, 13)
+    assert app._mouse_to_grid(inside) == Position(11, 13)
     assert app._mouse_to_grid((GRID_LEFT + GRID_WIDTH, inside[1])) is None
     assert app._mouse_to_grid((inside[0], GRID_TOP + GRID_HEIGHT)) is None
+
+
+def test_grid_draws_five_red_two_neutral_and_five_blue_rows(app: GameApp) -> None:
+    app._load_campaign(0)
+    app.screen.fill((0, 0, 0))
+    app._draw_grid()
+
+    samples = tuple(
+        app.screen.get_at(
+            (
+                GRID_LEFT + CELL_SIZE // 2,
+                GRID_TOP + row * CELL_SIZE + CELL_SIZE // 2,
+            )
+        )[:3]
+        for row in range(12)
+    )
+
+    assert samples == (
+        *(ENEMY_ZONE_COLOR for _ in range(5)),
+        *(NEUTRAL_ZONE_COLOR for _ in range(2)),
+        *(BLUE_ZONE_COLOR for _ in range(5)),
+    )
+
+
+def test_hp_bar_and_text_fit_inside_a_fifty_six_pixel_cell(app: GameApp) -> None:
+    center = app._cell_center(Position(11, 13))
+    cell = pygame.Rect(
+        center[0] - CELL_SIZE // 2,
+        center[1] - CELL_SIZE // 2,
+        CELL_SIZE,
+        CELL_SIZE,
+    )
+    bar = _battle_hp_bar_rect(center)
+    hp_text = app.fonts["tiny"].render("10", True, (255, 255, 255))
+    hp_text_rect = hp_text.get_rect(
+        center=(center[0], center[1] + HP_TEXT_OFFSET_Y)
+    )
+
+    assert BATTLE_HP_BAR_SIZE == (42, 5)
+    assert cell.contains(bar)
+    assert bar.top == cell.top + 1
+    assert cell.contains(hp_text_rect)
 
 
 def test_number_keys_five_and_six_select_new_units(app: GameApp) -> None:

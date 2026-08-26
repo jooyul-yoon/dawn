@@ -10,6 +10,9 @@ from . import student_settings as settings
 from .campaigns import CAMPAIGNS, Difficulty
 from .controller import GameController
 from .domain import (
+    DEFAULT_BATTLE_HEIGHT,
+    DEFAULT_BATTLE_WIDTH,
+    TERRITORY_DEPTH,
     UNIT_REGISTRY,
     BattleEvent,
     BattleState,
@@ -22,15 +25,16 @@ from .settings_validation import validate_student_settings
 from .student_rules_validation import validate_student_rules
 
 
-WINDOW_SIZE = (1408, 888)
+WINDOW_SIZE = (1280, 888)
 FPS = 60
 GRID_LEFT = 40
 GRID_TOP = 150
-CELL_SIZE = 64
-GRID_WIDTH = 14 * CELL_SIZE
-GRID_HEIGHT = 10 * CELL_SIZE
+CELL_SIZE = 56
+GRID_WIDTH = DEFAULT_BATTLE_WIDTH * CELL_SIZE
+GRID_HEIGHT = DEFAULT_BATTLE_HEIGHT * CELL_SIZE
 PANEL_LEFT = GRID_LEFT + GRID_WIDTH + 32
 PANEL_WIDTH = 400
+PANEL_HEIGHT = GRID_TOP + GRID_HEIGHT - 20
 SIMULATION_SECONDS = settings.BATTLE_STEP_SECONDS
 UNIT_ASSET_DIR = Path(__file__).resolve().parent / "assets" / "units"
 UNIT_ASSET_FILES = {
@@ -43,6 +47,8 @@ UNIT_ASSET_FILES = {
 }
 BATTLE_UNIT_IMAGE_SIZE = (48, 48)
 CARD_UNIT_IMAGE_SIZE = (44, 44)
+BATTLE_HP_BAR_SIZE = (42, 5)
+HP_TEXT_OFFSET_Y = 19
 
 BACKGROUND = (13, 18, 30)
 PANEL = (25, 33, 50)
@@ -53,6 +59,9 @@ ACCENT = (255, 199, 92)
 BLUE = (74, 151, 255)
 RED = (237, 91, 105)
 GREEN = (83, 204, 142)
+ENEMY_ZONE_COLOR = (51, 31, 42)
+NEUTRAL_ZONE_COLOR = (28, 36, 50)
+BLUE_ZONE_COLOR = (25, 45, 67)
 
 UNIT_KINDS = (
     "infantry",
@@ -90,6 +99,16 @@ def _load_unit_images(
             continue
         images[kind] = pygame.transform.smoothscale(source, size)
     return images
+
+
+def _battle_hp_bar_rect(center: tuple[int, int]) -> pygame.Rect:
+    width, height = BATTLE_HP_BAR_SIZE
+    return pygame.Rect(
+        center[0] - width // 2,
+        center[1] - CELL_SIZE // 2 + 1,
+        width,
+        height,
+    )
 
 
 class GameApp:
@@ -385,12 +404,12 @@ class GameApp:
                     CELL_SIZE,
                     CELL_SIZE,
                 )
-                if row < 3:
-                    color = (51, 31, 42)
-                elif row >= battle.height - 4:
-                    color = (25, 45, 67)
+                if row < TERRITORY_DEPTH:
+                    color = ENEMY_ZONE_COLOR
+                elif row >= battle.height - TERRITORY_DEPTH:
+                    color = BLUE_ZONE_COLOR
                 else:
-                    color = (28, 36, 50)
+                    color = NEUTRAL_ZONE_COLOR
                 if (
                     hover == Position(row, column)
                     and battle.state is BattleState.SETUP
@@ -418,7 +437,7 @@ class GameApp:
             color = BLUE if unit.team is Team.BLUE else RED
             self._draw_unit_visual(unit, center, color)
             hp_ratio = unit.hp / unit.max_hp
-            bar = pygame.Rect(center[0] - 23, center[1] - 31, 46, 6)
+            bar = _battle_hp_bar_rect(center)
             pygame.draw.rect(self.screen, (54, 24, 31), bar, border_radius=3)
             pygame.draw.rect(
                 self.screen,
@@ -430,7 +449,7 @@ class GameApp:
                 str(unit.hp),
                 self.fonts["tiny"],
                 TEXT,
-                (center[0], center[1] + 21),
+                (center[0], center[1] + HP_TEXT_OFFSET_Y),
                 center=True,
             )
 
@@ -564,7 +583,7 @@ class GameApp:
         return False
 
     def _draw_side_panel(self) -> None:
-        panel_rect = pygame.Rect(PANEL_LEFT, 20, PANEL_WIDTH, 720)
+        panel_rect = pygame.Rect(PANEL_LEFT, 20, PANEL_WIDTH, PANEL_HEIGHT)
         pygame.draw.rect(self.screen, PANEL, panel_rect, border_radius=16)
         pygame.draw.rect(self.screen, (50, 65, 91), panel_rect, width=2, border_radius=16)
 
@@ -871,42 +890,42 @@ class GameApp:
         if self.controller.campaign_index is None:
             return
         normal_layouts: tuple[tuple[tuple[str, Position], ...], ...] = (
-            (("infantry", Position(8, 5)), ("tank", Position(8, 7))),
+            (("infantry", Position(9, 5)), ("tank", Position(9, 7))),
             (
-                ("anti_tank", Position(8, 4)),
-                ("anti_tank", Position(8, 6)),
-                ("anti_tank", Position(8, 8)),
-                ("infantry", Position(7, 5)),
-                ("infantry", Position(7, 7)),
+                ("anti_tank", Position(9, 4)),
+                ("anti_tank", Position(9, 6)),
+                ("anti_tank", Position(9, 8)),
+                ("infantry", Position(8, 5)),
+                ("infantry", Position(8, 7)),
             ),
             (
-                ("tank", Position(8, 6)),
-                ("anti_tank", Position(8, 4)),
-                ("artillery", Position(8, 9)),
-                ("infantry", Position(7, 5)),
-                ("infantry", Position(7, 8)),
+                ("tank", Position(9, 6)),
+                ("anti_tank", Position(9, 4)),
+                ("artillery", Position(9, 9)),
+                ("infantry", Position(8, 5)),
+                ("infantry", Position(8, 8)),
             ),
         )
         hard_layouts: tuple[tuple[tuple[str, Position], ...], ...] = (
             (
-                ("infantry", Position(6, 12)),
-                ("artillery", Position(8, 1)),
+                ("infantry", Position(7, 12)),
+                ("artillery", Position(9, 1)),
             ),
             (
-                ("infantry", Position(8, 9)),
-                ("infantry", Position(6, 4)),
-                ("artillery", Position(8, 12)),
-                ("anti_tank", Position(7, 5)),
-                ("infantry", Position(7, 11)),
-            ),
-            (
-                ("anti_tank", Position(8, 5)),
-                ("infantry", Position(7, 2)),
-                ("anti_tank", Position(6, 6)),
-                ("infantry", Position(7, 10)),
+                ("infantry", Position(9, 9)),
                 ("infantry", Position(7, 4)),
-                ("infantry", Position(7, 8)),
-                ("infantry", Position(6, 4)),
+                ("artillery", Position(9, 12)),
+                ("anti_tank", Position(8, 5)),
+                ("infantry", Position(8, 11)),
+            ),
+            (
+                ("anti_tank", Position(9, 5)),
+                ("infantry", Position(8, 2)),
+                ("anti_tank", Position(7, 6)),
+                ("infantry", Position(8, 10)),
+                ("infantry", Position(8, 4)),
+                ("infantry", Position(8, 8)),
+                ("infantry", Position(7, 4)),
             ),
         )
         layouts = (
