@@ -118,6 +118,15 @@ def _deployment_zone_label_position(battle_height: int) -> tuple[int, int]:
     )
 
 
+def _local_deployment_zone_label_positions(
+    battle_height: int,
+) -> tuple[tuple[int, int], tuple[int, int]]:
+    return (
+        (GRID_LEFT + 10, GRID_TOP - 20),
+        (GRID_LEFT + 10, GRID_TOP + battle_height * CELL_SIZE + 6),
+    )
+
+
 class GameApp:
     def __init__(
         self,
@@ -516,6 +525,12 @@ class GameApp:
                         active_zone = row < TERRITORY_DEPTH
                     else:
                         active_zone = row >= battle.height - TERRITORY_DEPTH
+                    position = Position(row, column)
+                    active_zone = (
+                        active_zone
+                        and not battle.blocks_deployment(position)
+                        and battle.unit_at(position) is None
+                    )
                 if (
                     hover == Position(row, column)
                     and battle.state is BattleState.SETUP
@@ -533,17 +548,20 @@ class GameApp:
                 pygame.draw.rect(self.screen, (59, 70, 88), rect, width=1)
 
         if self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER:
+            red_label_position, blue_label_position = (
+                _local_deployment_zone_label_positions(battle.height)
+            )
             self._draw_text(
                 "RED DEPLOYMENT ZONE",
                 self.fonts["tiny"],
                 (184, 105, 118),
-                (GRID_LEFT + 10, GRID_TOP + 8),
+                red_label_position,
             )
             self._draw_text(
                 "BLUE DEPLOYMENT ZONE",
                 self.fonts["tiny"],
                 (105, 157, 205),
-                _deployment_zone_label_position(battle.height),
+                blue_label_position,
             )
         else:
             self._draw_text(

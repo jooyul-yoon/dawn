@@ -8,6 +8,7 @@ from pathlib import Path
 import pygame
 import pytest
 
+from dawn_tactics import game as game_module
 from dawn_tactics.campaigns import VERIFIED_BLUE_LAYOUTS, Difficulty
 from dawn_tactics.controller import MatchMode
 from dawn_tactics.domain import Position, Team
@@ -23,6 +24,7 @@ from dawn_tactics.game import (
     GRID_TOP,
     GRID_WIDTH,
     HP_TEXT_OFFSET_Y,
+    MUTED,
     NEUTRAL_ZONE_COLOR,
     PANEL_HEIGHT,
     PANEL_LEFT,
@@ -180,6 +182,94 @@ def test_local_grid_hover_uses_the_active_team_color(
     app._draw_grid()
     assert app.screen.get_at(app._cell_center(red_position))[:3] == RED
     assert app.screen.get_at(app._cell_center(blue_position))[:3] == BLUE_ZONE_COLOR
+
+
+def test_local_grid_hover_skips_blocked_and_occupied_cells(
+    monkeypatch: pytest.MonkeyPatch,
+    app: GameApp,
+) -> None:
+    app._load_local_two_player()
+    blocked_position = Position(8, 4)
+    monkeypatch.setattr(
+        pygame.mouse,
+        "get_pos",
+        lambda: app._cell_center(blocked_position),
+    )
+    app._draw_grid()
+    assert app.controller.battle.blocks_deployment(blocked_position)
+    assert app.screen.get_at(app._cell_center(blocked_position))[:3] == BLUE_ZONE_COLOR
+
+    occupied_position = Position(7, 0)
+    assert app.controller.place_current_unit("infantry", occupied_position).ok
+    assert app.controller.place_current_unit("infantry", Position(4, 0)).ok
+    assert app.controller.active_team is Team.BLUE
+    monkeypatch.setattr(
+        pygame.mouse,
+        "get_pos",
+        lambda: app._cell_center(occupied_position),
+    )
+    app._draw_grid()
+    assert app.controller.battle.unit_at(occupied_position) is not None
+    assert app.screen.get_at(app._cell_center(occupied_position))[:3] == BLUE_ZONE_COLOR
+
+
+def test_local_deployment_labels_stay_outside_grid_units_header_and_panel(
+    app: GameApp,
+) -> None:
+    app._load_local_two_player()
+    red_position, blue_position = (
+        game_module._local_deployment_zone_label_positions(
+            app.controller.battle.height
+        )
+    )
+    label_rects = (
+        app.fonts["tiny"].render(
+            "RED DEPLOYMENT ZONE", True, RED
+        ).get_rect(topleft=red_position),
+        app.fonts["tiny"].render(
+            "BLUE DEPLOYMENT ZONE", True, BLUE
+        ).get_rect(topleft=blue_position),
+    )
+    grid_rect = pygame.Rect(GRID_LEFT, GRID_TOP, GRID_WIDTH, GRID_HEIGHT)
+    window_rect = pygame.Rect((0, 0), WINDOW_SIZE)
+    panel_rect = pygame.Rect(PANEL_LEFT, 20, PANEL_WIDTH, PANEL_HEIGHT)
+    header_rects = (
+        app.fonts["h1"].render("LOCAL 2 PLAYER", True, BLUE).get_rect(
+            topleft=(40, 24)
+        ),
+        app.fonts["body"].render(
+            "Build both forces, then start the automatic battle.", True, MUTED
+        ).get_rect(topleft=(40, 66)),
+        app.fonts["small"].render(
+            "Map Rule: terrain blocks movement and deployment, not ranged fire.",
+            True,
+            MUTED,
+        ).get_rect(topleft=(40, 101)),
+    )
+    legal_unit_cells = tuple(
+        pygame.Rect(
+            GRID_LEFT + column * CELL_SIZE,
+            GRID_TOP + row * CELL_SIZE,
+            CELL_SIZE,
+            CELL_SIZE,
+        )
+        for row in (*range(5), *range(7, 12))
+        for column in range(14)
+    )
+
+    assert all(window_rect.contains(rect) for rect in label_rects)
+    assert all(not rect.colliderect(grid_rect) for rect in label_rects)
+    assert all(not rect.colliderect(panel_rect) for rect in label_rects)
+    assert all(
+        not label.colliderect(header)
+        for label in label_rects
+        for header in header_rects
+    )
+    assert all(
+        not label.colliderect(cell)
+        for label in label_rects
+        for cell in legal_unit_cells
+    )
 
 
 def test_local_result_has_no_next_campaign_button(app: GameApp) -> None:
