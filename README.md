@@ -90,11 +90,11 @@ SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy .venv/bin/python -m dawn_tactics --l
 ## Controls
 
 - `1`–`6`: select a unit
-- Left click: place the selected unit in the blue deployment zone
-- Right click: remove a blue unit and receive a full refund during setup
+- Left click: deploy for Blue in a campaign, or for the active team in Local
+- Right click: refund a Blue campaign unit, or the active team's Local unit
 - `Space`: start battle
-- `R`: restart the current campaign
-- `Esc`: return to campaign selection
+- `R`: restart the current campaign or Local match
+- `Esc`: return to the main menu
 
 ## Run tests
 

@@ -457,6 +457,59 @@ def test_local_two_player_cli_flag_defaults_off_and_can_be_enabled() -> None:
     assert parser.parse_args(["--local-two-player"]).local_two_player is True
 
 
+def test_local_two_player_screenshot_cli_routes_only_through_local_setup(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    calls: list[object] = []
+    screen = object()
+
+    class FakeGameApp:
+        def __init__(self, difficulty: Difficulty) -> None:
+            calls.append(("init", difficulty))
+            self.screen = screen
+
+        def _load_local_two_player(self) -> None:
+            calls.append("load local")
+
+        def prepare_local_two_player_layout(self) -> None:
+            calls.append("prepare local")
+
+        def _load_campaign(self, index: int) -> None:
+            pytest.fail(f"campaign {index} must not load for a local screenshot")
+
+        def prepare_demo_layout(self) -> None:
+            pytest.fail("campaign demo layout must not prepare for a local screenshot")
+
+        def draw(self) -> None:
+            calls.append("draw")
+
+        def run(self) -> None:
+            pytest.fail("interactive loop must not run in screenshot mode")
+
+    output = tmp_path / "local-two-player.png"
+    monkeypatch.setattr(game_module, "GameApp", FakeGameApp)
+    monkeypatch.setattr(
+        pygame.image,
+        "save",
+        lambda surface, path: calls.append(("save", surface, path)),
+    )
+    monkeypatch.setattr(pygame, "quit", lambda: calls.append("quit"))
+
+    game_module.main(
+        ["--local-two-player", "--screenshot", str(output)]
+    )
+
+    assert calls == [
+        ("init", Difficulty.HARD),
+        "load local",
+        "prepare local",
+        "draw",
+        ("save", screen, output),
+        "quit",
+    ]
+
+
 def test_prepare_local_two_player_layout_uses_alternating_current_team_turns(
     app: GameApp,
 ) -> None:
