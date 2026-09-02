@@ -12,6 +12,7 @@ from .student_rules_validation import cavalry_damage_for, machine_gun_damage_for
 DEFAULT_BATTLE_WIDTH = 14
 DEFAULT_BATTLE_HEIGHT = 12
 TERRITORY_DEPTH = 5
+TERRAIN_KINDS = frozenset({"sea", "building"})
 
 
 class Team(str, Enum):
@@ -54,6 +55,23 @@ class Position:
             for point in candidates
             if 0 <= point.row < height and 0 <= point.column < width
         )
+
+
+class Terrain:
+    def __init__(
+        self,
+        kind: str,
+        position: Position,
+        *,
+        blocks_movement: bool = True,
+        blocks_deployment: bool = True,
+    ) -> None:
+        if kind not in TERRAIN_KINDS:
+            raise ValueError(f"Unknown terrain kind: {kind}.")
+        self.kind = kind
+        self.position = position
+        self.blocks_movement = blocks_movement
+        self.blocks_deployment = blocks_deployment
 
 
 @dataclass(frozen=True)
@@ -268,12 +286,21 @@ class Battle:
         width: int = DEFAULT_BATTLE_WIDTH,
         height: int = DEFAULT_BATTLE_HEIGHT,
         max_ticks: int = 180,
+        terrain: Iterable[Terrain] = (),
     ) -> None:
         if width < 2 or height < 2:
             raise ValueError("The battlefield must be at least 2 x 2.")
         self.width = width
         self.height = height
         self.max_ticks = max_ticks
+        self.terrain = tuple(terrain)
+        terrain_positions: set[Position] = set()
+        for terrain_tile in self.terrain:
+            if not self._inside(terrain_tile.position):
+                raise ValueError("Terrain position is outside the battlefield.")
+            if terrain_tile.position in terrain_positions:
+                raise ValueError("Terrain positions cannot contain duplicates.")
+            terrain_positions.add(terrain_tile.position)
         self.units: list[Unit] = []
         self.state = BattleState.SETUP
         self.tick = 0
@@ -293,6 +320,24 @@ class Battle:
             None,
         )
 
+    def terrain_at(self, position: Position) -> Terrain | None:
+        return next(
+            (
+                terrain
+                for terrain in self.terrain
+                if terrain.position == position
+            ),
+            None,
+        )
+
+    def blocks_deployment(self, position: Position) -> bool:
+        terrain = self.terrain_at(position)
+        return terrain is not None and terrain.blocks_deployment
+
+    def blocks_movement(self, position: Position) -> bool:
+        terrain = self.terrain_at(position)
+        return terrain is not None and terrain.blocks_movement
+
     def unit_by_id(self, unit_id: int) -> Unit | None:
         return next((unit for unit in self.units if unit.unit_id == unit_id), None)
 
@@ -301,6 +346,8 @@ class Battle:
             raise RuntimeError("Units can only be added during setup.")
         if not self._inside(unit.position):
             raise ValueError("Unit position is outside the battlefield.")
+        if self.blocks_deployment(unit.position):
+            raise ValueError("Unit position is blocked by terrain.")
         if self.unit_at(unit.position) is not None:
             raise ValueError("That cell is already occupied.")
         if self.unit_by_id(unit.unit_id) is not None:
@@ -472,7 +519,11 @@ class Battle:
                 destination = current
                 break
             for neighbor in current.neighbors(self.width, self.height):
-                if neighbor in parent or neighbor in occupied:
+                if (
+                    neighbor in parent
+                    or neighbor in occupied
+                    or self.blocks_movement(neighbor)
+                ):
                     continue
                 parent[neighbor] = current
                 frontier.append(neighbor)

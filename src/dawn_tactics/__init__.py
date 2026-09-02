@@ -12,6 +12,7 @@ from .domain import (
     Position,
     Tank,
     Team,
+    Terrain,
     Unit,
 )
 
@@ -27,5 +28,6 @@ __all__ = [
     "Position",
     "Tank",
     "Team",
+    "Terrain",
     "Unit",
 ]
