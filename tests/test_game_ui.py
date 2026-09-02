@@ -154,7 +154,7 @@ def test_local_grid_hover_uses_the_active_team_color(
     app._load_local_two_player()
     blue_position = Position(7, 0)
     red_position = Position(4, 0)
-    neutral_position = Position(5, 0)
+    neutral_position = Position(5, 2)
 
     monkeypatch.setattr(
         pygame.mouse,
@@ -197,7 +197,10 @@ def test_local_grid_hover_skips_blocked_and_occupied_cells(
     )
     app._draw_grid()
     assert app.controller.battle.blocks_deployment(blocked_position)
-    assert app.screen.get_at(app._cell_center(blocked_position))[:3] == BLUE_ZONE_COLOR
+    blocked_color = app.screen.get_at(app._cell_center(blocked_position))[:3]
+    monkeypatch.setattr(pygame.mouse, "get_pos", lambda: (0, 0))
+    app._draw_grid()
+    assert app.screen.get_at(app._cell_center(blocked_position))[:3] == blocked_color
 
     occupied_position = Position(7, 0)
     assert app.controller.place_current_unit("infantry", occupied_position).ok

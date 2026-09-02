@@ -19,6 +19,7 @@ from .domain import (
     EventKind,
     Position,
     Team,
+    Terrain,
     Unit,
 )
 from .settings_validation import validate_student_settings
@@ -45,8 +46,14 @@ UNIT_ASSET_FILES = {
     "machine_gun": "machine_gun.png",
     "cavalry": "cavalry.png",
 }
+TERRAIN_ASSET_DIR = Path(__file__).resolve().parent / "assets" / "terrain"
+TERRAIN_ASSET_FILES = {
+    "sea": "sea.png",
+    "building": "building.png",
+}
 BATTLE_UNIT_IMAGE_SIZE = (48, 48)
 CARD_UNIT_IMAGE_SIZE = (44, 44)
+TERRAIN_IMAGE_SIZE = (CELL_SIZE - 2, CELL_SIZE - 2)
 BATTLE_HP_BAR_SIZE = (42, 5)
 HP_TEXT_OFFSET_Y = 19
 
@@ -101,6 +108,19 @@ def _load_unit_images(
     return images
 
 
+def _load_terrain_images(
+    asset_dir: Path = TERRAIN_ASSET_DIR,
+) -> dict[str, pygame.Surface]:
+    images: dict[str, pygame.Surface] = {}
+    for kind, filename in TERRAIN_ASSET_FILES.items():
+        try:
+            source = pygame.image.load(asset_dir / filename).convert_alpha()
+        except (FileNotFoundError, pygame.error):
+            continue
+        images[kind] = pygame.transform.smoothscale(source, TERRAIN_IMAGE_SIZE)
+    return images
+
+
 def _battle_hp_bar_rect(center: tuple[int, int]) -> pygame.Rect:
     width, height = BATTLE_HP_BAR_SIZE
     return pygame.Rect(
@@ -139,6 +159,7 @@ class GameApp:
         self.screen = pygame.display.set_mode(WINDOW_SIZE)
         self.unit_images = _load_unit_images(BATTLE_UNIT_IMAGE_SIZE)
         self.unit_card_images = _load_unit_images(CARD_UNIT_IMAGE_SIZE)
+        self.terrain_images = _load_terrain_images()
         self.clock = pygame.time.Clock()
         self.fonts = {
             "title": pygame.font.Font(None, 64),
@@ -505,6 +526,7 @@ class GameApp:
         hover = self._mouse_to_grid(pygame.mouse.get_pos())
         for row in range(battle.height):
             for column in range(battle.width):
+                position = Position(row, column)
                 rect = pygame.Rect(
                     GRID_LEFT + column * CELL_SIZE,
                     GRID_TOP + row * CELL_SIZE,
@@ -525,7 +547,6 @@ class GameApp:
                         active_zone = row < TERRITORY_DEPTH
                     else:
                         active_zone = row >= battle.height - TERRITORY_DEPTH
-                    position = Position(row, column)
                     active_zone = (
                         active_zone
                         and not battle.blocks_deployment(position)
@@ -545,6 +566,9 @@ class GameApp:
                     else:
                         color = tuple(min(255, value + 22) for value in color)
                 pygame.draw.rect(self.screen, color, rect)
+                terrain = battle.terrain_at(position)
+                if terrain is not None:
+                    self._draw_terrain_tile(terrain, rect)
                 pygame.draw.rect(self.screen, (59, 70, 88), rect, width=1)
 
         if self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER:
@@ -576,6 +600,42 @@ class GameApp:
                 (105, 157, 205),
                 _deployment_zone_label_position(battle.height),
             )
+
+    def _draw_terrain_tile(self, terrain: Terrain, rect: pygame.Rect) -> None:
+        kind = terrain.kind
+        image = self.terrain_images.get(kind)
+        if image is not None:
+            self.screen.blit(image, image.get_rect(center=rect.center))
+        elif kind == "sea":
+            pygame.draw.rect(self.screen, (38, 76, 113), rect.inflate(-2, -2))
+            for offset in (14, 28, 42):
+                pygame.draw.line(
+                    self.screen,
+                    (139, 184, 211),
+                    (rect.left + 9, rect.top + offset),
+                    (rect.left + 30, rect.top + offset - 2),
+                    width=1,
+                )
+        else:
+            inner = rect.inflate(-2, -2)
+            pygame.draw.rect(self.screen, (130, 91, 65), inner, border_radius=3)
+            roof = pygame.Rect(rect.left + 11, rect.top + 12, 34, 31)
+            pygame.draw.rect(self.screen, (65, 53, 51), roof, border_radius=2)
+            pygame.draw.line(
+                self.screen,
+                (176, 132, 82),
+                roof.topleft,
+                roof.bottomright,
+                width=2,
+            )
+            pygame.draw.line(
+                self.screen,
+                (176, 132, 82),
+                roof.topright,
+                roof.bottomleft,
+                width=2,
+            )
+        pygame.draw.rect(self.screen, (242, 207, 104), rect, width=2)
 
     def _draw_units(self) -> None:
         for unit in self.controller.battle.living_units:

@@ -27,7 +27,7 @@ dawn-tactics = "dawn_tactics.game:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-dawn_tactics = ["assets/units/*.png"]
+dawn_tactics = ["assets/units/*.png", "assets/terrain/*.png"]
 
 [tool.pytest.ini_options]
 addopts = "-q"
