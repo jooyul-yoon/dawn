@@ -150,6 +150,21 @@ writes `deployment_report()` from its `def` line.
 The core vocabulary is definition, function call, parameter, argument, return
 value, and local variable. This lesson does not edit or rebalance the game.
 
+## Lesson 04: Classes and Objects
+
+Lesson 04 turns the function ideas into a small blueprint. Students make a
+`MissionCard` class, create separate objects with independent state, read
+`self` and `__init__`, then implement a compact `Unit` class with a
+`take_damage()` method.
+
+- [Korean/bilingual student notebook](lessons/lesson_04_classes.ipynb)
+- [English student notebook](lessons/lesson_04_classes_en.ipynb)
+- [Korean teacher guide](lessons/lesson_04_curriculum_ko.md)
+
+The final task stays in the notebook and leaves its implementation to the
+student. Lesson 05 will introduce inheritance after class, object, attribute,
+method, and independent state are secure.
+
 ## Teaching boundary
 
 In Lesson 01 students edit `student_settings.py`; in Lesson 02 they edit
