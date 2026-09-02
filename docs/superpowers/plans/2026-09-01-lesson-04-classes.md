@@ -165,7 +165,7 @@ def test_final_task_is_prompt_only_and_self_check_is_exact() -> None:
         "# take_damage(amount) subtracts damage and never lets hp go below 0.\n"
     )
     for solution_fragment in (
-        "class Unit",
+        "class Unit:",
         "def __init__",
         "def take_damage",
         "self.hp",
