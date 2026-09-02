@@ -247,6 +247,25 @@ def test_local_refund_only_removes_the_active_teams_unit_without_switching() -> 
     assert controller.active_team is Team.BLUE
 
 
+def test_legacy_blue_refund_cannot_bypass_local_active_team_rules() -> None:
+    controller = GameController()
+    controller.load_local_two_player()
+    blue_position = Position(9, 2)
+    assert controller.place_current_unit("infantry", blue_position).ok
+    assert controller.active_team is Team.RED
+    before_budgets = dict(controller.team_budgets)
+    before_remaining_budget = controller.remaining_budget
+
+    result = controller.remove_blue_unit(blue_position)
+
+    assert not result.ok
+    assert controller.battle.unit_at(blue_position) is not None
+    assert controller.team_budgets == before_budgets
+    assert controller.active_team is Team.RED
+    assert controller.remaining_budget == before_remaining_budget
+    assert controller.remaining_budget == controller.active_budget
+
+
 def test_local_pass_keeps_budgets_and_switches_active_team() -> None:
     controller = GameController()
     controller.load_local_two_player()

@@ -88,6 +88,8 @@ class GameController:
         return ActionResult(True, f"{unit_class.display_name} deployed.")
 
     def remove_blue_unit(self, position: Position) -> ActionResult:
+        if self.match_mode is not MatchMode.CAMPAIGN:
+            return ActionResult(False, "Blue refunds are only available in campaigns.")
         if self.battle.state is not BattleState.SETUP:
             return ActionResult(False, "Deployment is locked during battle.")
         removed = self.battle.remove_unit_at(position, Team.BLUE)
