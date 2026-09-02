@@ -14,6 +14,7 @@ from dawn_tactics.domain import Position, Team
 from dawn_tactics.game import (
     BATTLE_HP_BAR_SIZE,
     BACKGROUND,
+    BLUE,
     BLUE_ZONE_COLOR,
     CELL_SIZE,
     ENEMY_ZONE_COLOR,
@@ -26,6 +27,7 @@ from dawn_tactics.game import (
     PANEL_HEIGHT,
     PANEL_LEFT,
     PANEL_WIDTH,
+    RED,
     WINDOW_SIZE,
     GameApp,
     _battle_hp_bar_rect,
@@ -141,6 +143,43 @@ def test_local_grid_and_pass_inputs_follow_the_active_team(app: GameApp) -> None
     assert app.controller.active_team is Team.RED
     app._handle_key(pygame.K_p)
     assert app.controller.active_team is Team.BLUE
+
+
+def test_local_grid_hover_uses_the_active_team_color(
+    monkeypatch: pytest.MonkeyPatch,
+    app: GameApp,
+) -> None:
+    app._load_local_two_player()
+    blue_position = Position(7, 0)
+    red_position = Position(4, 0)
+    neutral_position = Position(5, 0)
+
+    monkeypatch.setattr(
+        pygame.mouse,
+        "get_pos",
+        lambda: app._cell_center(blue_position),
+    )
+    app._draw_grid()
+    assert app.screen.get_at(app._cell_center(blue_position))[:3] == BLUE
+    assert app.screen.get_at(app._cell_center(red_position))[:3] == ENEMY_ZONE_COLOR
+
+    monkeypatch.setattr(
+        pygame.mouse,
+        "get_pos",
+        lambda: app._cell_center(neutral_position),
+    )
+    app._draw_grid()
+    assert app.screen.get_at(app._cell_center(neutral_position))[:3] == NEUTRAL_ZONE_COLOR
+
+    assert app.controller.pass_turn().ok
+    monkeypatch.setattr(
+        pygame.mouse,
+        "get_pos",
+        lambda: app._cell_center(red_position),
+    )
+    app._draw_grid()
+    assert app.screen.get_at(app._cell_center(red_position))[:3] == RED
+    assert app.screen.get_at(app._cell_center(blue_position))[:3] == BLUE_ZONE_COLOR
 
 
 def test_local_result_has_no_next_campaign_button(app: GameApp) -> None:

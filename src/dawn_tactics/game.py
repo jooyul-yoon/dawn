@@ -521,7 +521,14 @@ class GameApp:
                     and battle.state is BattleState.SETUP
                     and active_zone
                 ):
-                    color = tuple(min(255, value + 22) for value in color)
+                    if self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER:
+                        color = (
+                            BLUE
+                            if self.controller.active_team is Team.BLUE
+                            else RED
+                        )
+                    else:
+                        color = tuple(min(255, value + 22) for value in color)
                 pygame.draw.rect(self.screen, color, rect)
                 pygame.draw.rect(self.screen, (59, 70, 88), rect, width=1)
 
