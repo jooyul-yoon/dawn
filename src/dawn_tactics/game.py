@@ -8,7 +8,7 @@ import pygame
 
 from . import student_settings as settings
 from .campaigns import CAMPAIGNS, VERIFIED_BLUE_LAYOUTS, Difficulty
-from .controller import GameController
+from .controller import ActionResult, GameController, MatchMode
 from .domain import (
     DEFAULT_BATTLE_HEIGHT,
     DEFAULT_BATTLE_WIDTH,
@@ -187,6 +187,12 @@ class GameApp:
         elif key == pygame.K_SPACE:
             result = self.controller.start_battle()
             self.status = result.message
+        elif (
+            key == pygame.K_p
+            and self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER
+            and self.controller.battle.state is BattleState.SETUP
+        ):
+            self._set_local_status(self.controller.pass_turn())
         elif key == pygame.K_r:
             self._restart()
 
@@ -202,6 +208,8 @@ class GameApp:
                 if rect.collidepoint(mouse_position):
                     self._load_campaign(index)
                     return
+            if self._local_two_player_rect().collidepoint(mouse_position):
+                self._load_local_two_player()
             return
 
         state = self.controller.battle.state
@@ -230,6 +238,13 @@ class GameApp:
                 result = self.controller.start_battle()
                 self.status = result.message
                 return
+            if (
+                self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER
+                and self.controller.battle.state is BattleState.SETUP
+                and self._pass_rect().collidepoint(mouse_position)
+            ):
+                self._set_local_status(self.controller.pass_turn())
+                return
             if self._restart_rect().collidepoint(mouse_position):
                 self._restart()
                 return
@@ -241,14 +256,27 @@ class GameApp:
         if grid_position is None:
             return
         if button == 1 and self.selected_kind is not None:
-            result = self.controller.place_blue_unit(
-                self.selected_kind,
-                grid_position,
-            )
-            self.status = result.message
+            if self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER:
+                self._set_local_status(
+                    self.controller.place_current_unit(
+                        self.selected_kind,
+                        grid_position,
+                    )
+                )
+            else:
+                result = self.controller.place_blue_unit(
+                    self.selected_kind,
+                    grid_position,
+                )
+                self.status = result.message
         elif button == 3:
-            result = self.controller.remove_blue_unit(grid_position)
-            self.status = result.message
+            if self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER:
+                self._set_local_status(
+                    self.controller.remove_current_unit(grid_position)
+                )
+            else:
+                result = self.controller.remove_blue_unit(grid_position)
+                self.status = result.message
 
     def _update(self, elapsed: float) -> None:
         now = time.monotonic()
@@ -355,39 +383,102 @@ class GameApp:
                 dark_text=True,
             )
 
+        local_rect = self._local_two_player_rect()
+        hovered = local_rect.collidepoint(pygame.mouse.get_pos())
+        pygame.draw.rect(
+            self.screen,
+            PANEL_LIGHT if hovered else PANEL,
+            local_rect,
+            border_radius=14,
+        )
+        pygame.draw.rect(
+            self.screen,
+            ACCENT if hovered else (63, 78, 105),
+            local_rect,
+            width=2,
+            border_radius=14,
+        )
+        self._draw_text(
+            "LOCAL 2 PLAYER",
+            self.fonts["h1"],
+            TEXT,
+            (local_rect.x + 28, local_rect.y + 14),
+        )
+        self._draw_text(
+            "$2,000 EACH • ALTERNATE ONE UNIT AT A TIME",
+            self.fonts["body"],
+            ACCENT,
+            (local_rect.x + 28, local_rect.y + 48),
+        )
+        self._draw_text(
+            "SEA + BUILDING TERRAIN • SAME-SCREEN PLAY",
+            self.fonts["small"],
+            MUTED,
+            (local_rect.x + 28, local_rect.y + 78),
+        )
+        self._draw_button(
+            pygame.Rect(local_rect.right - 145, local_rect.y + 37, 112, 42),
+            "PLAY LOCAL",
+            ACCENT,
+            dark_text=True,
+        )
+
         self._draw_text(
             "Fictional teams • Abstract combat • No graphic violence",
             self.fonts["small"],
             MUTED,
-            (640, 716),
+            (640, 838),
             center=True,
         )
 
     def _draw_game(self) -> None:
         campaign = self.controller.campaign
-        if campaign is None:
-            return
-        difficulty = self.controller.difficulty
-        mode_color = RED if difficulty is Difficulty.HARD else GREEN
-        self._draw_text(
-            f"{campaign.title}  •  {difficulty.value.upper()}",
-            self.fonts["h1"],
-            mode_color,
-            (40, 24),
-        )
-        self._draw_text(
-            campaign.objective_for(difficulty),
-            self.fonts["body"],
-            MUTED,
-            (40, 66),
-        )
-        if settings.SHOW_HISTORY_NOTE:
+        if self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER:
+            active_color = (
+                BLUE if self.controller.active_team is Team.BLUE else RED
+            )
             self._draw_text(
-                f"History Note: {campaign.history_note}",
+                "LOCAL 2 PLAYER",
+                self.fonts["h1"],
+                active_color,
+                (40, 24),
+            )
+            self._draw_text(
+                "Build both forces, then start the automatic battle.",
+                self.fonts["body"],
+                MUTED,
+                (40, 66),
+            )
+            self._draw_text(
+                "Map Rule: terrain blocks movement and deployment, not ranged fire.",
                 self.fonts["small"],
                 (180, 192, 218),
                 (40, 101),
             )
+        elif campaign is not None:
+            difficulty = self.controller.difficulty
+            mode_color = RED if difficulty is Difficulty.HARD else GREEN
+            self._draw_text(
+                f"{campaign.title}  •  {difficulty.value.upper()}",
+                self.fonts["h1"],
+                mode_color,
+                (40, 24),
+            )
+            self._draw_text(
+                campaign.objective_for(difficulty),
+                self.fonts["body"],
+                MUTED,
+                (40, 66),
+            )
+            if settings.SHOW_HISTORY_NOTE:
+                self._draw_text(
+                    f"History Note: {campaign.history_note}",
+                    self.fonts["small"],
+                    (180, 192, 218),
+                    (40, 101),
+                )
+        else:
+            return
         self._draw_grid()
         self._draw_units()
         self._draw_visual_events()
@@ -417,26 +508,49 @@ class GameApp:
                     color = BLUE_ZONE_COLOR
                 else:
                     color = NEUTRAL_ZONE_COLOR
+                active_zone = (
+                    self.controller.match_mode is not MatchMode.LOCAL_TWO_PLAYER
+                )
+                if self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER:
+                    if self.controller.active_team is Team.RED:
+                        active_zone = row < TERRITORY_DEPTH
+                    else:
+                        active_zone = row >= battle.height - TERRITORY_DEPTH
                 if (
                     hover == Position(row, column)
                     and battle.state is BattleState.SETUP
+                    and active_zone
                 ):
                     color = tuple(min(255, value + 22) for value in color)
                 pygame.draw.rect(self.screen, color, rect)
                 pygame.draw.rect(self.screen, (59, 70, 88), rect, width=1)
 
-        self._draw_text(
-            "ENEMY ZONE",
-            self.fonts["tiny"],
-            (184, 105, 118),
-            (GRID_LEFT + 10, GRID_TOP + 8),
-        )
-        self._draw_text(
-            "YOUR DEPLOYMENT ZONE",
-            self.fonts["tiny"],
-            (105, 157, 205),
-            _deployment_zone_label_position(battle.height),
-        )
+        if self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER:
+            self._draw_text(
+                "RED DEPLOYMENT ZONE",
+                self.fonts["tiny"],
+                (184, 105, 118),
+                (GRID_LEFT + 10, GRID_TOP + 8),
+            )
+            self._draw_text(
+                "BLUE DEPLOYMENT ZONE",
+                self.fonts["tiny"],
+                (105, 157, 205),
+                _deployment_zone_label_position(battle.height),
+            )
+        else:
+            self._draw_text(
+                "ENEMY ZONE",
+                self.fonts["tiny"],
+                (184, 105, 118),
+                (GRID_LEFT + 10, GRID_TOP + 8),
+            )
+            self._draw_text(
+                "YOUR DEPLOYMENT ZONE",
+                self.fonts["tiny"],
+                (105, 157, 205),
+                _deployment_zone_label_position(battle.height),
+            )
 
     def _draw_units(self) -> None:
         for unit in self.controller.battle.living_units:
@@ -594,6 +708,10 @@ class GameApp:
         pygame.draw.rect(self.screen, PANEL, panel_rect, border_radius=16)
         pygame.draw.rect(self.screen, (50, 65, 91), panel_rect, width=2, border_radius=16)
 
+        if self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER:
+            self._draw_local_side_panel()
+            return
+
         state = self.controller.battle.state
         difficulty = self.controller.difficulty
         mode_color = RED if difficulty is Difficulty.HARD else GREEN
@@ -706,6 +824,132 @@ class GameApp:
             (PANEL_LEFT + 24, 637),
         )
 
+    def _draw_local_side_panel(self) -> None:
+        state = self.controller.battle.state
+        active_team = self.controller.active_team
+        active_color = BLUE if active_team is Team.BLUE else RED
+        self._draw_text(
+            f"{active_team.value.upper()} TURN",
+            self.fonts["h2"],
+            active_color,
+            (PANEL_LEFT + 24, 42),
+        )
+        self._draw_text(
+            f"BLUE  ${self.controller.budget_for(Team.BLUE):,}",
+            self.fonts["body"],
+            BLUE,
+            (PANEL_LEFT + 24, 76),
+        )
+        self._draw_text(
+            f"RED  ${self.controller.budget_for(Team.RED):,}",
+            self.fonts["body"],
+            RED,
+            (PANEL_LEFT + 208, 76),
+        )
+        if state is BattleState.RUNNING:
+            instruction = "Units act automatically • R restarts this match"
+        elif state is BattleState.SETUP:
+            instruction = "1–6 select • Place one unit, then pass turns"
+        else:
+            instruction = "Battle complete • Review the result or try again"
+        self._draw_text(
+            instruction,
+            self.fonts["tiny"],
+            MUTED,
+            (PANEL_LEFT + 24, 112),
+        )
+
+        for kind, rect in self._unit_card_rects().items():
+            unit_class = UNIT_REGISTRY[kind]
+            selected = kind == self.selected_kind
+            affordable = self.controller.active_budget >= unit_class.cost
+            fill = (42, 55, 79) if affordable else (35, 39, 51)
+            pygame.draw.rect(self.screen, fill, rect, border_radius=10)
+            pygame.draw.rect(
+                self.screen,
+                active_color if selected else (71, 84, 108),
+                rect,
+                width=3 if selected else 1,
+                border_radius=10,
+            )
+            self._draw_unit_card_visual(kind, rect)
+            text_x = rect.x + 56
+            name_color = TEXT if affordable else (113, 121, 137)
+            self._draw_text(
+                unit_class.display_name,
+                self.fonts["body"],
+                name_color,
+                (text_x, rect.y + 7),
+            )
+            self._draw_text(
+                f"${unit_class.cost}  HP {unit_class.max_hp}",
+                self.fonts["small"],
+                GREEN if affordable else (99, 106, 119),
+                (text_x, rect.y + 30),
+            )
+            self._draw_text(
+                unit_rule_text(kind),
+                self.fonts["card_rule"],
+                MUTED,
+                (text_x, rect.y + 53),
+            )
+
+        teams = {unit.team for unit in self.controller.battle.living_units}
+        start_enabled = state is BattleState.SETUP and teams == {Team.BLUE, Team.RED}
+        if state is BattleState.RUNNING:
+            start_label = "BATTLE RUNNING"
+        elif state is BattleState.SETUP:
+            start_label = "START BATTLE"
+        else:
+            start_label = "BATTLE COMPLETE"
+        self._draw_button(
+            self._start_rect(),
+            start_label,
+            GREEN if start_enabled else (75, 83, 96),
+            dark_text=start_enabled,
+        )
+        self._draw_button(
+            self._pass_rect(),
+            "PASS (P)",
+            active_color if state is BattleState.SETUP else (75, 83, 96),
+            dark_text=state is BattleState.SETUP,
+        )
+        self._draw_button(self._restart_rect(), "RESTART", (73, 92, 124))
+        self._draw_button(self._menu_rect(), "CAMPAIGNS", (73, 92, 124))
+
+        status_rect = self._status_rect()
+        pygame.draw.rect(self.screen, (19, 25, 39), status_rect, border_radius=8)
+        self._draw_wrapped(
+            self.status,
+            self.fonts["small"],
+            TEXT,
+            status_rect.inflate(-18, -12),
+        )
+        self._draw_text(
+            f"Battle tick: {self.controller.battle.tick} / {self.controller.battle.max_ticks}",
+            self.fonts["tiny"],
+            MUTED,
+            (PANEL_LEFT + 24, 574),
+        )
+        self._draw_text(
+            "TERRAIN RULES",
+            self.fonts["small"],
+            ACCENT,
+            (PANEL_LEFT + 24, 610),
+        )
+        self._draw_text(
+            "Sea + buildings block movement and deployment.",
+            self.fonts["tiny"],
+            MUTED,
+            (PANEL_LEFT + 24, 637),
+        )
+        self._draw_text(
+            "Ranged fire crosses terrain.",
+            self.fonts["tiny"],
+            MUTED,
+            (PANEL_LEFT + 24, 659),
+        )
+
     def _draw_result_overlay(self) -> None:
         overlay = pygame.Surface((GRID_WIDTH, GRID_HEIGHT), pygame.SRCALPHA)
         overlay.fill((6, 9, 16, 210))
@@ -732,6 +976,9 @@ class GameApp:
     def _campaign_rects(self) -> list[pygame.Rect]:
         return [pygame.Rect(180, 160 + index * 170, 920, 130) for index in range(3)]
 
+    def _local_two_player_rect(self) -> pygame.Rect:
+        return pygame.Rect(180, 650, 920, 116)
+
     def _difficulty_button_rects(self) -> dict[Difficulty, pygame.Rect]:
         return {
             Difficulty.NORMAL: pygame.Rect(1010, 44, 92, 38),
@@ -752,7 +999,12 @@ class GameApp:
         return result
 
     def _start_rect(self) -> pygame.Rect:
+        if self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER:
+            return pygame.Rect(PANEL_LEFT + 24, 400, 168, 48)
         return pygame.Rect(PANEL_LEFT + 24, 400, PANEL_WIDTH - 48, 48)
+
+    def _pass_rect(self) -> pygame.Rect:
+        return pygame.Rect(PANEL_LEFT + 208, 400, 168, 48)
 
     def _restart_rect(self) -> pygame.Rect:
         return pygame.Rect(PANEL_LEFT + 24, 456, 168, 40)
@@ -769,9 +1021,12 @@ class GameApp:
         y = 402
         restart = pygame.Rect(GRID_LEFT + 154, y, 140, 48)
         menu = pygame.Rect(GRID_LEFT + 314, y, 140, 48)
-        campaign_index = self.controller.campaign_index or 0
         next_rect = None
-        if campaign_index + 1 < len(CAMPAIGNS):
+        campaign_index = self.controller.campaign_index or 0
+        if (
+            self.controller.match_mode is MatchMode.CAMPAIGN
+            and campaign_index + 1 < len(CAMPAIGNS)
+        ):
             next_rect = pygame.Rect(GRID_LEFT + 474, y, 140, 48)
         return restart, menu, next_rect
 
@@ -788,10 +1043,26 @@ class GameApp:
         self.visual_events.clear()
         self.simulation_accumulator = 0.0
 
+    def _load_local_two_player(self) -> None:
+        self.controller.load_local_two_player()
+        self.mode = "game"
+        self.selected_kind = "infantry"
+        self.status = "Blue's turn. Select a unit and deploy in the blue zone."
+        self.visual_events.clear()
+        self.simulation_accumulator = 0.0
+
+    def _set_local_status(self, result: ActionResult) -> None:
+        message = result.message
+        active_turn = f"{self.controller.active_team.value.title()}'s turn."
+        self.status = message if message == active_turn else f"{message} {active_turn}"
+
     def _restart(self) -> None:
         self.controller.restart()
         self.selected_kind = "infantry"
-        self.status = "Campaign reset. Try a new strategy."
+        if self.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER:
+            self.status = "Local setup reset. Blue's turn."
+        else:
+            self.status = "Campaign reset. Try a new strategy."
         self.visual_events.clear()
         self.simulation_accumulator = 0.0
 

@@ -9,9 +9,11 @@ import pygame
 import pytest
 
 from dawn_tactics.campaigns import VERIFIED_BLUE_LAYOUTS, Difficulty
+from dawn_tactics.controller import MatchMode
 from dawn_tactics.domain import Position, Team
 from dawn_tactics.game import (
     BATTLE_HP_BAR_SIZE,
+    BACKGROUND,
     BLUE_ZONE_COLOR,
     CELL_SIZE,
     ENEMY_ZONE_COLOR,
@@ -75,6 +77,95 @@ def test_unit_cards_show_six_non_overlapping_choices(app: GameApp) -> None:
     assert not app._menu_rect().colliderect(app._status_rect())
     grid_rect = pygame.Rect(GRID_LEFT, GRID_TOP, GRID_WIDTH, GRID_HEIGHT)
     assert all(not rect.colliderect(grid_rect) for rect in values)
+
+
+def test_local_two_player_menu_card_fits_below_campaign_cards(app: GameApp) -> None:
+    local_rect = app._local_two_player_rect()
+
+    assert local_rect == pygame.Rect(180, 650, 920, 116)
+    assert all(not local_rect.colliderect(rect) for rect in app._campaign_rects())
+    assert local_rect.bottom < 838
+
+
+def test_local_two_player_load_resets_setup_ui_state(app: GameApp) -> None:
+    app.selected_kind = "tank"
+    app.visual_events.append((object(), 0.0))  # type: ignore[arg-type]
+    app.simulation_accumulator = 2.0
+
+    app._load_local_two_player()
+
+    assert app.mode == "game"
+    assert app.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER
+    assert app.selected_kind == "infantry"
+    assert app.status == "Blue's turn. Select a unit and deploy in the blue zone."
+    assert app.visual_events == []
+    assert app.simulation_accumulator == 0.0
+
+
+def test_local_menu_click_starts_local_two_player_setup(app: GameApp) -> None:
+    app._handle_click(app._local_two_player_rect().center, 1)
+
+    assert app.mode == "game"
+    assert app.controller.match_mode is MatchMode.LOCAL_TWO_PLAYER
+
+
+def test_local_start_and_pass_buttons_split_without_overlaps(app: GameApp) -> None:
+    app._load_local_two_player()
+
+    assert app._start_rect() == pygame.Rect(PANEL_LEFT + 24, 400, 168, 48)
+    assert app._pass_rect() == pygame.Rect(PANEL_LEFT + 208, 400, 168, 48)
+    assert not app._start_rect().colliderect(app._pass_rect())
+    assert not app._start_rect().colliderect(app._restart_rect())
+    assert not app._pass_rect().colliderect(app._menu_rect())
+
+
+def test_local_grid_and_pass_inputs_follow_the_active_team(app: GameApp) -> None:
+    app._load_local_two_player()
+    blue_cell = app._cell_center(Position(7, 0))
+    red_cell = app._cell_center(Position(4, 0))
+
+    app._handle_click(blue_cell, 1)
+    assert app.controller.battle.unit_at(Position(7, 0)).team is Team.BLUE
+    assert app.controller.active_team is Team.RED
+    assert app.status.endswith("Red's turn.")
+
+    app._handle_click(blue_cell, 3)
+    assert app.controller.active_team is Team.RED
+    assert app.controller.battle.unit_at(Position(7, 0)).team is Team.BLUE
+
+    app._handle_click(red_cell, 1)
+    assert app.controller.battle.unit_at(Position(4, 0)).team is Team.RED
+    assert app.controller.active_team is Team.BLUE
+
+    app._handle_click(app._pass_rect().center, 1)
+    assert app.controller.active_team is Team.RED
+    app._handle_key(pygame.K_p)
+    assert app.controller.active_team is Team.BLUE
+
+
+def test_local_result_has_no_next_campaign_button(app: GameApp) -> None:
+    app._load_local_two_player()
+
+    _, _, next_rect = app._result_button_rects()
+
+    assert next_rect is None
+
+
+def test_local_two_player_setup_renders_dual_budget_panel(
+    tmp_path: Path,
+    app: GameApp,
+) -> None:
+    app._load_local_two_player()
+    app._handle_click(app._cell_center(Position(7, 0)), 1)
+
+    app.draw()
+    output = tmp_path / "local-two-player-setup.png"
+    pygame.image.save(app.screen, output)
+
+    assert output.stat().st_size > 10_000
+    assert app.screen.get_at((42, 26))[:3] != BACKGROUND
+    assert app.controller.budget_for(Team.BLUE) == 1_900
+    assert app.controller.budget_for(Team.RED) == 2_000
 
 
 def test_five_row_window_grid_and_panel_geometry(app: GameApp) -> None:
