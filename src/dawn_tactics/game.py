@@ -1261,6 +1261,20 @@ class GameApp:
                 deployment.position,
             )
 
+    def prepare_local_two_player_layout(self) -> None:
+        layout = (
+            ("infantry", Position(9, 2)),
+            ("infantry", Position(2, 2)),
+            ("tank", Position(9, 7)),
+            ("anti_tank", Position(2, 7)),
+        )
+        for kind, position in layout:
+            result = self.controller.place_current_unit(kind, position)
+            if not result.ok:
+                raise RuntimeError(
+                    f"Could not prepare local two-player layout: {result.message}"
+                )
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the Dawn Tactics demo.")
@@ -1288,6 +1302,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=0,
         help="Advance the prepared screenshot battle by N ticks.",
     )
+    parser.add_argument(
+        "--local-two-player",
+        action="store_true",
+        help="Start a local two-player match, or render its prepared setup.",
+    )
     return parser
 
 
@@ -1295,8 +1314,12 @@ def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     app = GameApp(Difficulty(args.difficulty))
     if args.screenshot:
-        app._load_campaign(args.campaign - 1)
-        app.prepare_demo_layout()
+        if args.local_two_player:
+            app._load_local_two_player()
+            app.prepare_local_two_player_layout()
+        else:
+            app._load_campaign(args.campaign - 1)
+            app.prepare_demo_layout()
         if args.simulate_ticks > 0:
             app.controller.start_battle()
             app.status = "Battle started! Units now act automatically."
@@ -1312,6 +1335,8 @@ def main(argv: list[str] | None = None) -> None:
         pygame.image.save(app.screen, args.screenshot)
         pygame.quit()
         return
+    if args.local_two_player:
+        app._load_local_two_player()
     app.run()
 
 

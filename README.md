@@ -68,6 +68,25 @@ python -m dawn_tactics --difficulty normal
 python -m dawn_tactics --difficulty hard
 ```
 
+## Local 2 Player
+
+Choose **LOCAL 2 PLAYER** from the menu for one-screen play. Blue goes first.
+Each side receives $2,000 as a spending cap, and every successful placement
+hands the turn to the other side; an invalid action spends nothing and keeps the
+turn. Press `P` (or click **PASS**) to give up the current setup turn.
+
+Right-click refunds one of the active team's units during setup without changing
+the turn. Both Blue and Red need at least one unit before **Start Battle** (or
+`Space`) can begin the automatic battle. Sea and building tiles block movement
+and deployment, but do not block ranged fire. Press `R` to reset the local
+match or `Esc` to return to the menu.
+
+Save a deterministic local setup preview without opening a window:
+
+```bash
+SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy .venv/bin/python -m dawn_tactics --local-two-player --screenshot screenshots/local-two-player-setup.png
+```
+
 ## Controls
 
 - `1`–`6`: select a unit

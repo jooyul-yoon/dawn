@@ -34,6 +34,7 @@ from dawn_tactics.game import (
     GameApp,
     _battle_hp_bar_rect,
     _deployment_zone_label_position,
+    build_parser,
     unit_rule_text,
 )
 
@@ -447,3 +448,35 @@ def test_prepare_demo_layout_uses_verified_campaign_data(
         assert actual == expected
     finally:
         pygame.quit()
+
+
+def test_local_two_player_cli_flag_defaults_off_and_can_be_enabled() -> None:
+    parser = build_parser()
+
+    assert parser.parse_args([]).local_two_player is False
+    assert parser.parse_args(["--local-two-player"]).local_two_player is True
+
+
+def test_prepare_local_two_player_layout_uses_alternating_current_team_turns(
+    app: GameApp,
+) -> None:
+    app._load_local_two_player()
+
+    app.prepare_local_two_player_layout()
+
+    assert tuple(
+        (unit.team, unit.kind, unit.position)
+        for unit in app.controller.battle.units
+    ) == (
+        (Team.BLUE, "infantry", Position(9, 2)),
+        (Team.RED, "infantry", Position(2, 2)),
+        (Team.BLUE, "tank", Position(9, 7)),
+        (Team.RED, "anti_tank", Position(2, 7)),
+    )
+    assert app.controller.budget_for(Team.BLUE) == 1_500
+    assert app.controller.budget_for(Team.RED) == 1_650
+    assert app.controller.active_team is Team.BLUE
+    assert {terrain.kind for terrain in app.controller.battle.terrain} == {
+        "sea",
+        "building",
+    }
